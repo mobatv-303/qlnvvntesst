@@ -35,7 +35,6 @@
         [x-cloak] { display: none !important; }
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
-        /* Tùy chỉnh thanh cuộn thanh lịch */
         ::-webkit-scrollbar { width: 6px; height: 6px; }
         ::-webkit-scrollbar-track { background: transparent; }
         ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 9999px; }
@@ -44,13 +43,13 @@
 </head>
 <body class="bg-slate-100/70 dark:bg-slate-950 text-slate-800 dark:text-slate-100 font-sans transition-colors duration-300 min-h-screen pb-16" x-data="hrmApp()">
 
-    <!-- MÀN HÌNH ĐĂNG NHẬP (GLASSMORPHISM) -->
+    <!-- MÀN HÌNH ĐĂNG NHẬP -->
     <div x-show="!isLoggedIn" class="fixed inset-0 bg-slate-950/70 backdrop-blur-xl flex items-center justify-center z-50 p-4" x-cloak>
         <div class="bg-white/90 dark:bg-slate-900/90 backdrop-blur-2xl rounded-[2.5rem] shadow-2xl shadow-indigo-500/10 w-full max-w-md overflow-hidden border border-slate-200/80 dark:border-slate-800 transition-all">
             <div class="bg-gradient-to-tr from-indigo-600 via-violet-600 to-purple-600 px-6 py-12 text-center text-white relative overflow-hidden">
                 <div class="absolute -right-12 -top-12 w-44 h-44 bg-white/10 rounded-full blur-3xl pointer-events-none"></div>
                 <div class="absolute -left-12 -bottom-12 w-44 h-44 bg-black/10 rounded-full blur-3xl pointer-events-none"></div>
-                <div class="w-20 h-20 bg-white/20 backdrop-blur-xl rounded-3xl mx-auto flex items-center justify-center text-4xl mb-4 shadow-xl shadow-black/10 border border-white/30 transform hover:scale-105 transition duration-300">
+                <div class="w-20 h-20 bg-white/20 backdrop-blur-xl rounded-3xl mx-auto flex items-center justify-center text-4xl mb-4 shadow-xl shadow-black/10 border border-white/30">
                     <i class="fa-solid fa-calendar-days text-white"></i>
                 </div>
                 <h2 class="text-2xl font-extrabold tracking-tight">HRM Smart Schedule</h2>
@@ -543,6 +542,21 @@
         </main>
     </div>
 
+    <!-- TOAST NOTIFICATION POPUP -->
+    <div x-show="showToast" 
+         x-transition:enter="transition ease-out duration-300" 
+         x-transition:enter-start="opacity-0 transform translate-y-4" 
+         x-transition:enter-end="opacity-100 transform translate-y-0" 
+         x-transition:leave="transition ease-in duration-200" 
+         x-transition:leave-start="opacity-100 transform translate-y-0" 
+         x-transition:leave-end="opacity-0 transform translate-y-4" 
+         class="fixed bottom-6 right-6 z-50 bg-slate-900 dark:bg-slate-800 text-white px-5 py-4 rounded-2xl shadow-2xl border border-slate-700/80 flex items-center gap-3.5 text-xs md:text-sm font-extrabold tracking-wide" x-cloak>
+        <div class="w-7 h-7 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center shrink-0">
+            <i class="fa-solid fa-check text-xs"></i>
+        </div>
+        <span x-text="toastMessage"></span>
+    </div>
+
     <!-- MODAL ĐỔI MẬT KHẨU -->
     <div x-show="showPasswordModal" class="fixed inset-0 bg-slate-950/70 backdrop-blur-md flex items-center justify-center z-50 p-4" x-cloak>
         <div class="bg-white dark:bg-slate-900 rounded-[2.5rem] shadow-2xl w-full max-w-sm overflow-hidden p-6 md:p-8 space-y-5 border border-slate-200 dark:border-slate-800">
@@ -599,6 +613,12 @@
             currentWeekOffset: 0,
             statsMonth: new Date().getMonth() + 1,
             statsYear: new Date().getFullYear(),
+            
+            // Toast State
+            showToast: false,
+            toastMessage: '',
+            toastTimeout: null,
+
             days: [
                 { key: 't2', name: 'Thứ 2' },
                 { key: 't3', name: 'Thứ 3' },
@@ -613,6 +633,15 @@
             lockedWeeks: {},
             allWeeksCache: {},
             activeListeners: {},
+
+            triggerToast(message) {
+                this.toastMessage = message;
+                this.showToast = true;
+                if (this.toastTimeout) clearTimeout(this.toastTimeout);
+                this.toastTimeout = setTimeout(() => {
+                    this.showToast = false;
+                }, 3000);
+            },
 
             init() {
                 const startFirebaseSync = () => {
@@ -753,6 +782,7 @@
                 if (window.db && window.fbRef && window.fbSet) {
                     window.fbSet(window.fbRef(window.db, `hrm_smart_schedule_data/lockedWeeks/${this.currentWeekKey}`), newStatus);
                 }
+                this.triggerToast(newStatus ? 'Đã khóa lịch tuần này!' : 'Đã mở khóa lịch tuần này!');
             },
 
             getWeekDisplayString() {
@@ -898,6 +928,7 @@
                     localStorage.setItem('hrm_role', 'admin');
                     localStorage.setItem('hrm_current_user', 'Admin');
                     this.loginError = '';
+                    this.triggerToast('Đăng nhập Quản trị thành công!');
                 } else {
                     this.loginError = 'Tên đăng nhập hoặc mật khẩu quản trị không đúng!';
                 }
@@ -916,6 +947,7 @@
                 localStorage.setItem('hrm_role', 'staff');
                 localStorage.setItem('hrm_current_user', this.selectedStaffName);
                 this.loginError = '';
+                this.triggerToast(`Chào mừng ${this.currentUser} đến với hệ thống!`);
             },
 
             changeAdminPassword() {
@@ -939,6 +971,7 @@
                 this.passwordError = false;
                 this.passwordMsg = 'Đổi mật khẩu thành công!';
                 this.pwdForm = { oldPwd: '', newPwd: '', confirmPwd: '' };
+                this.triggerToast('Đổi mật khẩu Admin thành công!');
                 setTimeout(() => { this.showPasswordModal = false; this.passwordMsg = ''; }, 1500);
             },
 
@@ -960,12 +993,14 @@
                 this.employees.push(newEmp);
                 this.newEmpName = '';
                 this.saveEmployeesToStorage();
+                this.triggerToast('Đã thêm nhân sự mới thành công!');
             },
 
             deleteEmployee(id) {
                 if (confirm('Bạn có chắc chắn muốn xóa nhân sự này khỏi hệ thống?')) {
                     this.employees = this.employees.filter(e => e.id !== id);
                     this.saveEmployeesToStorage();
+                    this.triggerToast('Đã xóa nhân sự thành công!');
                 }
             },
 
@@ -980,6 +1015,7 @@
                         emp.schedule[this.currentWeekKey] = window.getDefaultWeekSchedule(false);
                     });
                     this.saveToStorage();
+                    this.triggerToast('Đã xóa trắng lịch trực tuần này!');
                 }
             },
 
@@ -1001,7 +1037,11 @@
                 if (!emp.schedule || !emp.schedule[this.currentWeekKey]) return;
                 if (window.db && window.fbRef && window.fbSet) {
                     const empWeekRef = window.fbRef(window.db, `hrm_smart_schedule_data/schedules_by_week/${this.currentWeekKey}/${emp.id}`);
-                    window.fbSet(empWeekRef, emp.schedule[this.currentWeekKey]);
+                    window.fbSet(empWeekRef, emp.schedule[this.currentWeekKey]).then(() => {
+                        this.triggerToast('Đã lưu ca trực thành công!');
+                    });
+                } else {
+                    this.triggerToast('Đã lưu ca trực thành công!');
                 }
             },
 
@@ -1023,7 +1063,9 @@
                     currentWeekScheduleData[emp.id] = emp.schedule[this.currentWeekKey];
                 });
                 if (window.db && window.fbRef && window.fbSet) {
-                    window.fbSet(window.fbRef(window.db, `hrm_smart_schedule_data/schedules_by_week/${this.currentWeekKey}`), currentWeekScheduleData);
+                    window.fbSet(window.fbRef(window.db, `hrm_smart_schedule_data/schedules_by_week/${this.currentWeekKey}`), currentWeekScheduleData).then(() => {
+                        this.triggerToast('Đã lưu lịch trực thành công!');
+                    });
                 }
             },
 
@@ -1051,6 +1093,7 @@
                 a.href = URL.createObjectURL(blob);
                 a.download = `BaoCao_${dayName}_${dateStr.replace('/', '-')}.doc`;
                 a.click();
+                this.triggerToast('Đã xuất file báo cáo ngày!');
             },
 
             exportWeeklyReportWord() {
@@ -1085,6 +1128,7 @@
                 a.href = URL.createObjectURL(blob);
                 a.download = `BaoCao_TongHop.doc`;
                 a.click();
+                this.triggerToast('Đã xuất file báo cáo cả tuần!');
             }
         }
     }
