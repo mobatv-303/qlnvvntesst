@@ -8,7 +8,7 @@
     <script src="config.js"></script>
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-        import { getDatabase, ref, set, onValue, update } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
+        import { getDatabase, ref, set, onValue, update, push } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
         const fallbackConfig = { apiKey: "", authDomain: "", databaseURL: "", projectId: "", storageBucket: "", messagingSenderId: "", appId: "" };
         const firebaseConfig = (window.APP_CONFIG && window.APP_CONFIG.firebaseConfig) ? window.APP_CONFIG.firebaseConfig : fallbackConfig;
         const app = initializeApp(firebaseConfig);
@@ -18,6 +18,7 @@
         window.fbSet = set;
         window.fbOnValue = onValue;
         window.fbUpdate = update;
+        window.fbPush = push;
     </script>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -147,7 +148,7 @@
 
         <main class="max-w-7xl w-full mx-auto px-4 md:px-8 py-8 flex-1 space-y-6">
             <!-- THANH ĐIỀU HƯỚNG TUẦN -->
-            <div x-show="currentView !== 'monthly'" class="bg-white dark:bg-slate-900 p-5 md:p-6 rounded-3xl shadow-xl shadow-slate-200/50 dark:shadow-none border border-slate-200/80 dark:border-slate-800/80 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 transition-colors">
+            <div x-show="currentView !== 'monthly' && currentView !== 'logs'" class="bg-white dark:bg-slate-900 p-5 md:p-6 rounded-3xl shadow-xl shadow-slate-200/50 dark:shadow-none border border-slate-200/80 dark:border-slate-800/80 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 transition-colors">
                 <div class="flex items-center gap-4">
                     <div class="w-12 h-12 bg-indigo-500/10 dark:bg-indigo-500/20 text-indigo-600 dark:text-indigo-400 rounded-2xl flex items-center justify-center text-xl shrink-0 border border-indigo-500/20">
                         <i class="fa-solid fa-calendar-week"></i>
@@ -196,6 +197,9 @@
                         </button>
                         <button @click="currentView = 'monthly'; loadAllSchedulesForMonthlyStats()" :class="currentView === 'monthly' ? 'border-indigo-600 text-indigo-600 dark:text-indigo-400 font-extrabold' : 'border-transparent text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 font-bold'" class="pb-3.5 border-b-2 text-xs md:text-sm transition flex items-center gap-2.5">
                             <i class="fa-solid fa-chart-pie text-base"></i> Thống Kê Theo Tháng
+                        </button>
+                        <button @click="currentView = 'logs'; loadActivityLogs()" :class="currentView === 'logs' ? 'border-indigo-600 text-indigo-600 dark:text-indigo-400 font-extrabold' : 'border-transparent text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 font-bold'" class="pb-3.5 border-b-2 text-xs md:text-sm transition flex items-center gap-2.5">
+                            <i class="fa-solid fa-clock-rotate-left text-base"></i> Nhật Ký Hoạt Động
                         </button>
                     </div>
                 </template>
@@ -386,6 +390,41 @@
                             </template>
                         </tbody>
                     </table>
+                </div>
+            </div>
+
+            <!-- CHẾ ĐỘ: NHẬT KÝ HOẠT ĐỘNG (ADMIN) -->
+            <div x-show="role === 'admin' && currentView === 'logs'" class="space-y-6 max-w-4xl mx-auto">
+                <div class="bg-white dark:bg-slate-900 p-6 md:p-8 rounded-3xl shadow-xl shadow-slate-200/50 dark:shadow-none border border-slate-200/80 dark:border-slate-800/80 flex flex-wrap justify-between items-center gap-4 transition-colors">
+                    <div>
+                        <h3 class="text-lg md:text-xl font-extrabold text-slate-900 dark:text-white mb-1">Nhật Ký Hoạt Động (Audit Log)</h3>
+                        <p class="text-xs md:text-sm text-slate-500 dark:text-slate-400 font-semibold">Ghi vết toàn bộ thao tác cập nhật ca trực, khóa tuần và nhân sự trong hệ thống.</p>
+                    </div>
+                    <button @click="clearActivityLogs()" class="bg-rose-500/10 hover:bg-rose-500/20 text-rose-600 dark:text-rose-400 border border-rose-500/20 px-4 py-2.5 rounded-2xl text-xs font-extrabold transition">
+                        Xóa lịch sử nhật ký
+                    </button>
+                </div>
+
+                <div class="bg-white dark:bg-slate-900 rounded-3xl shadow-xl shadow-slate-200/50 dark:shadow-none border border-slate-200/80 dark:border-slate-800/80 overflow-hidden transition-colors">
+                    <div class="divide-y divide-slate-100 dark:divide-slate-800/80 max-h-[600px] overflow-y-auto">
+                        <template x-if="activityLogs.length === 0">
+                            <div class="p-12 text-center text-slate-400 text-sm font-semibold">Chưa có nhật ký hoạt động nào ghi nhận.</div>
+                        </template>
+                        <template x-for="log in activityLogs.slice().reverse()" :key="log.id">
+                            <div class="p-4 md:p-5 flex items-start gap-4 hover:bg-slate-50/60 dark:hover:bg-slate-800/40 transition">
+                                <div class="w-10 h-10 rounded-2xl bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 flex items-center justify-center shrink-0 border border-indigo-500/20 mt-0.5">
+                                    <i class="fa-solid fa-circle-info text-sm"></i>
+                                </div>
+                                <div class="flex-1 min-w-0">
+                                    <div class="flex items-center justify-between gap-2 mb-1">
+                                        <span class="text-xs font-extrabold text-slate-900 dark:text-white" x-text="log.actor"></span>
+                                        <span class="text-[11px] text-slate-400 font-semibold" x-text="log.timestamp"></span>
+                                    </div>
+                                    <p class="text-xs md:text-sm text-slate-600 dark:text-slate-300 font-medium" x-text="log.action"></p>
+                                </div>
+                            </div>
+                        </template>
+                    </div>
                 </div>
             </div>
 
@@ -614,10 +653,11 @@
             statsMonth: new Date().getMonth() + 1,
             statsYear: new Date().getFullYear(),
             
-            // Toast State
+            // Toast & Logs State
             showToast: false,
             toastMessage: '',
             toastTimeout: null,
+            activityLogs: [],
 
             days: [
                 { key: 't2', name: 'Thứ 2' },
@@ -641,6 +681,42 @@
                 this.toastTimeout = setTimeout(() => {
                     this.showToast = false;
                 }, 3000);
+            },
+
+            logActivity(actionText) {
+                if (!window.db || !window.fbRef || !window.fbPush) return;
+                const logsRef = window.fbRef(window.db, 'hrm_smart_schedule_data/activity_logs');
+                const now = new Date();
+                const timeString = `${now.getDate().toString().padStart(2, '0')}/${(now.getMonth()+1).toString().padStart(2, '0')}/${now.getFullYear()} ${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
+                window.fbPush(logsRef, {
+                    actor: this.currentUser || 'Hệ thống',
+                    action: actionText,
+                    timestamp: timeString
+                });
+            },
+
+            loadActivityLogs() {
+                if (!window.db || !window.fbRef || !window.fbOnValue) return;
+                const logsRef = window.fbRef(window.db, 'hrm_smart_schedule_data/activity_logs');
+                window.fbOnValue(logsRef, (snapshot) => {
+                    const data = snapshot.val();
+                    if (data) {
+                        this.activityLogs = Object.keys(data).map(key => ({ id: key, ...data[key] }));
+                    } else {
+                        this.activityLogs = [];
+                    }
+                });
+            },
+
+            clearActivityLogs() {
+                if (confirm('Bạn có chắc chắn muốn xóa toàn bộ lịch sử nhật ký hoạt động không?')) {
+                    if (window.db && window.fbRef && window.fbSet) {
+                        window.fbSet(window.fbRef(window.db, 'hrm_smart_schedule_data/activity_logs'), null).then(() => {
+                            this.activityLogs = [];
+                            this.triggerToast('Đã xóa toàn bộ nhật ký!');
+                        });
+                    }
+                }
             },
 
             init() {
@@ -684,6 +760,9 @@
                         });
                         if (this.currentView === 'monthly') {
                             this.loadAllSchedulesForMonthlyStats();
+                        }
+                        if (this.currentView === 'logs') {
+                            this.loadActivityLogs();
                         }
                     } else {
                         setTimeout(startFirebaseSync, 100);
@@ -782,7 +861,9 @@
                 if (window.db && window.fbRef && window.fbSet) {
                     window.fbSet(window.fbRef(window.db, `hrm_smart_schedule_data/lockedWeeks/${this.currentWeekKey}`), newStatus);
                 }
-                this.triggerToast(newStatus ? 'Đã khóa lịch tuần này!' : 'Đã mở khóa lịch tuần này!');
+                const msg = newStatus ? `Đã khóa lịch tuần ${this.currentWeekKey}` : `Đã mở khóa lịch tuần ${this.currentWeekKey}`;
+                this.triggerToast(msg);
+                this.logActivity(msg);
             },
 
             getWeekDisplayString() {
@@ -915,6 +996,7 @@
                     emp.schedule[this.currentWeekKey][dKey].ca3 = status;
                 });
                 this.saveEmpSchedule(emp);
+                this.logActivity(`${emp.name} đã ${status ? 'chọn full' : 'hủy toàn bộ'} ca trực tuần ${this.currentWeekKey}`);
             },
 
             handleAdminLogin() {
@@ -929,6 +1011,7 @@
                     localStorage.setItem('hrm_current_user', 'Admin');
                     this.loginError = '';
                     this.triggerToast('Đăng nhập Quản trị thành công!');
+                    this.logActivity('Admin đăng nhập hệ thống');
                 } else {
                     this.loginError = 'Tên đăng nhập hoặc mật khẩu quản trị không đúng!';
                 }
@@ -948,6 +1031,7 @@
                 localStorage.setItem('hrm_current_user', this.selectedStaffName);
                 this.loginError = '';
                 this.triggerToast(`Chào mừng ${this.currentUser} đến với hệ thống!`);
+                this.logActivity(`Nhân sự ${this.currentUser} đăng nhập hệ thống`);
             },
 
             changeAdminPassword() {
@@ -972,6 +1056,7 @@
                 this.passwordMsg = 'Đổi mật khẩu thành công!';
                 this.pwdForm = { oldPwd: '', newPwd: '', confirmPwd: '' };
                 this.triggerToast('Đổi mật khẩu Admin thành công!');
+                this.logActivity('Admin đã thay đổi mật khẩu quản trị');
                 setTimeout(() => { this.showPasswordModal = false; this.passwordMsg = ''; }, 1500);
             },
 
@@ -991,16 +1076,20 @@
                 const newEmp = { id: newId, name: this.newEmpName.trim(), schedule: {} };
                 newEmp.schedule[this.currentWeekKey] = window.getDefaultWeekSchedule();
                 this.employees.push(newEmp);
+                const addedName = this.newEmpName.trim();
                 this.newEmpName = '';
                 this.saveEmployeesToStorage();
                 this.triggerToast('Đã thêm nhân sự mới thành công!');
+                this.logActivity(`Đã thêm nhân sự mới: ${addedName}`);
             },
 
             deleteEmployee(id) {
+                const empToDelete = this.employees.find(e => e.id === id);
                 if (confirm('Bạn có chắc chắn muốn xóa nhân sự này khỏi hệ thống?')) {
                     this.employees = this.employees.filter(e => e.id !== id);
                     this.saveEmployeesToStorage();
                     this.triggerToast('Đã xóa nhân sự thành công!');
+                    this.logActivity(`Đã xóa nhân sự: ${empToDelete ? empToDelete.name : id}`);
                 }
             },
 
@@ -1016,6 +1105,7 @@
                     });
                     this.saveToStorage();
                     this.triggerToast('Đã xóa trắng lịch trực tuần này!');
+                    this.logActivity(`Đã xóa trắng toàn bộ ca trực tuần ${this.currentWeekKey}`);
                 }
             },
 
@@ -1039,6 +1129,7 @@
                     const empWeekRef = window.fbRef(window.db, `hrm_smart_schedule_data/schedules_by_week/${this.currentWeekKey}/${emp.id}`);
                     window.fbSet(empWeekRef, emp.schedule[this.currentWeekKey]).then(() => {
                         this.triggerToast('Đã lưu ca trực thành công!');
+                        this.logActivity(`${emp.name} đã cập nhật lịch trực tuần ${this.currentWeekKey}`);
                     });
                 } else {
                     this.triggerToast('Đã lưu ca trực thành công!');
@@ -1065,6 +1156,7 @@
                 if (window.db && window.fbRef && window.fbSet) {
                     window.fbSet(window.fbRef(window.db, `hrm_smart_schedule_data/schedules_by_week/${this.currentWeekKey}`), currentWeekScheduleData).then(() => {
                         this.triggerToast('Đã lưu lịch trực thành công!');
+                        this.logActivity(`Đã lưu toàn bộ lịch trực tuần ${this.currentWeekKey}`);
                     });
                 }
             },
@@ -1094,6 +1186,7 @@
                 a.download = `BaoCao_${dayName}_${dateStr.replace('/', '-')}.doc`;
                 a.click();
                 this.triggerToast('Đã xuất file báo cáo ngày!');
+                this.logActivity(`Xuất báo cáo Word ngày ${dayName} (${dateStr})`);
             },
 
             exportWeeklyReportWord() {
@@ -1129,6 +1222,7 @@
                 a.download = `BaoCao_TongHop.doc`;
                 a.click();
                 this.triggerToast('Đã xuất file báo cáo cả tuần!');
+                this.logActivity(`Xuất báo cáo Word cả tuần (${weekStr})`);
             }
         }
     }
