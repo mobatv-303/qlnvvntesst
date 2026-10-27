@@ -16,7 +16,20 @@
     <!-- Alpine.js -->
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
     <!-- Cấu hình Firebase -->
-    <script type="module" src="./config.js"></script>
+    <!-- Cấu hình Firebase riêng biệt từ file config.js -->
+    <script src="config.js"></script>
+    <!-- Firebase App & Database (Modular SDK) -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+        import { getDatabase, ref, set, onValue, update } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
+        const app = initializeApp(window.APP_CONFIG.firebaseConfig);
+        const db = getDatabase(app);
+        window.db = db;
+        window.fbRef = ref;
+        window.fbSet = set;
+        window.fbOnValue = onValue;
+        window.fbUpdate = update;
+    </script>
     <style>
         [x-cloak] { display: none !important; }
         /* Tùy chỉnh thanh cuộn cho bảng */
