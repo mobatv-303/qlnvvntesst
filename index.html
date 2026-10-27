@@ -3,14 +3,15 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>HRM Smart Schedule - Quản lý lịch trực</title>
-    <!-- Cấu hình Firebase riêng biệt từ file config.js -->
+    <title>HRM Smart Schedule - Quản Lý Lịch Trực Cao Cấp</title>
+    <!-- Cấu hình Firebase -->
     <script src="config.js"></script>
-    <!-- Firebase App & Database (Modular SDK) -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
         import { getDatabase, ref, set, onValue, update } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
-        const app = initializeApp(window.APP_CONFIG.firebaseConfig);
+        const fallbackConfig = { apiKey: "", authDomain: "", databaseURL: "", projectId: "", storageBucket: "", messagingSenderId: "", appId: "" };
+        const firebaseConfig = (window.APP_CONFIG && window.APP_CONFIG.firebaseConfig) ? window.APP_CONFIG.firebaseConfig : fallbackConfig;
+        const app = initializeApp(firebaseConfig);
         const db = getDatabase(app);
         window.db = db;
         window.fbRef = ref;
@@ -27,70 +28,88 @@
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
     <!-- FontAwesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <style>
+        body { font-family: 'Inter', sans-serif; }
         [x-cloak] { display: none !important; }
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        /* Tùy chỉnh scrollbar đẹp hơn */
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+        .dark ::-webkit-scrollbar-thumb { background: #475569; }
     </style>
 </head>
-<body class="bg-gray-100 dark:bg-gray-900 font-sans transition-colors duration-200 pb-12" x-data="hrmApp()">
+<body class="bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-slate-100 font-sans transition-colors duration-300 min-h-screen pb-16" x-data="hrmApp()">
 
-    <!-- MÀN HÌNH ĐĂNG NHẬP -->
-    <div x-show="!isLoggedIn" class="fixed inset-0 bg-gray-900/60 backdrop-blur-sm flex items-center justify-center z-50 p-4" x-cloak>
-        <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-md overflow-hidden border border-gray-100 dark:border-gray-700">
-            <div class="bg-indigo-600 px-6 py-8 text-center text-white">
-                <div class="w-14 h-14 bg-white/10 rounded-2xl mx-auto flex items-center justify-center text-2xl mb-3">
-                    <i class="fa-solid fa-users-gear"></i>
+    <!-- MÀN HÌNH ĐĂNG NHẬP HIỆN ĐẠI -->
+    <div x-show="!isLoggedIn" class="fixed inset-0 bg-slate-900/60 backdrop-blur-md flex items-center justify-center z-50 p-4" x-cloak>
+        <div class="bg-white dark:bg-slate-900 rounded-3xl shadow-2xl w-full max-w-md overflow-hidden border border-slate-100 dark:border-slate-800 transform transition-all">
+            <div class="bg-gradient-to-tr from-indigo-600 via-indigo-700 to-violet-600 px-6 py-10 text-center text-white relative overflow-hidden">
+                <div class="absolute -right-10 -top-10 w-40 h-40 bg-white/10 rounded-full blur-2xl pointer-events-none"></div>
+                <div class="w-16 h-16 bg-white/15 backdrop-blur-md rounded-2xl mx-auto flex items-center justify-center text-3xl mb-4 shadow-inner">
+                    <i class="fa-solid fa-calendar-check"></i>
                 </div>
-                <h2 class="text-2xl font-bold">HRM Smart Schedule</h2>
-                <p class="text-indigo-200 text-sm mt-1">Hệ thống quản lý và đăng ký lịch trực ca</p>
+                <h2 class="text-2xl font-extrabold tracking-tight">HRM Smart Schedule</h2>
+                <p class="text-indigo-100 text-xs mt-1.5 font-medium">Hệ thống quản lý và đăng ký lịch trực thông minh</p>
             </div>
-            <div class="p-6 md:p-8 space-y-5">
+            <div class="p-6 md:p-8 space-y-6">
                 <template x-if="loginError">
-                    <div class="bg-rose-50 dark:bg-rose-900/30 text-rose-600 dark:text-rose-400 text-sm p-3 rounded-lg border border-rose-200 dark:border-rose-800 text-center font-medium" x-text="loginError"></div>
+                    <div class="bg-rose-50 dark:bg-rose-950/50 text-rose-600 dark:text-rose-400 text-xs p-3.5 rounded-xl border border-rose-200 dark:border-rose-800/60 flex items-center gap-2.5 font-medium animate-shake">
+                        <i class="fa-solid fa-circle-exclamation text-sm shrink-0"></i>
+                        <span x-text="loginError"></span>
+                    </div>
                 </template>
+
                 <!-- Form Nhân viên -->
                 <form x-show="loginType === 'staff'" @submit.prevent="handleStaffLogin" class="space-y-4">
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Chọn tên nhân viên</label>
-                        <select x-model="selectedStaffName" required class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
-                            <option value="">-- Chọn tên của bạn --</option>
-                            <template x-for="emp in employees" :key="emp.id">
-                                <option :value="emp.name" x-text="emp.name"></option>
-                            </template>
-                        </select>
+                        <label class="block text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-2">Chọn tên nhân sự</label>
+                        <div class="relative">
+                            <span class="absolute inset-y-0 left-0 flex items-center pl-4 text-slate-400"><i class="fa-solid fa-user"></i></span>
+                            <select x-model="selectedStaffName" required class="w-full pl-11 pr-4 py-3.5 border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 dark:text-white rounded-xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500 transition">
+                                <option value="">-- Chọn tên của bạn --</option>
+                                <template x-for="emp in employees" :key="emp.id">
+                                    <option :value="emp.name" x-text="emp.name"></option>
+                                </template>
+                            </select>
+                        </div>
                     </div>
-                    <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-3 rounded-xl transition shadow-sm">
-                        Vào Đăng Ký Lịch Trực
+                    <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-3.5 rounded-xl transition shadow-lg shadow-indigo-600/25 flex items-center justify-center gap-2 text-sm">
+                        <span>Vào Đăng Ký Lịch Trực</span>
+                        <i class="fa-solid fa-arrow-right text-xs"></i>
                     </button>
-                    <div class="text-xs text-gray-400 text-center">Chọn tên của bạn để vào đăng ký ca trực cá nhân</div>
                 </form>
+
                 <!-- Form Admin -->
                 <form x-show="loginType === 'admin'" @submit.prevent="handleAdminLogin" class="space-y-4">
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Tên đăng nhập Quản trị</label>
-                        <input type="text" x-model="adminForm.username" required placeholder="admin" class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                        <label class="block text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-2">Tài khoản quản trị</label>
+                        <div class="relative">
+                            <span class="absolute inset-y-0 left-0 flex items-center pl-4 text-slate-400"><i class="fa-solid fa-shield-halved"></i></span>
+                            <input type="text" x-model="adminForm.username" required placeholder="admin" class="w-full pl-11 pr-4 py-3.5 border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 dark:text-white rounded-xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500 transition">
+                        </div>
                     </div>
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Mật khẩu</label>
-                        <input type="password" x-model="adminForm.password" required placeholder="admin123" class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                        <label class="block text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-2">Mật khẩu</label>
+                        <div class="relative">
+                            <span class="absolute inset-y-0 left-0 flex items-center pl-4 text-slate-400"><i class="fa-solid fa-key"></i></span>
+                            <input type="password" x-model="adminForm.password" required placeholder="••••••••" class="w-full pl-11 pr-4 py-3.5 border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 dark:text-white rounded-xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500 transition">
+                        </div>
                     </div>
-                    <button type="submit" class="w-full bg-purple-600 hover:bg-purple-700 text-white font-medium py-3 rounded-xl transition shadow-sm">
-                        Đăng Nhập Quản Trị Viên
+                    <button type="submit" class="w-full bg-slate-900 hover:bg-slate-800 dark:bg-indigo-600 dark:hover:bg-indigo-700 text-white font-semibold py-3.5 rounded-xl transition shadow-lg shadow-slate-900/20 flex items-center justify-center gap-2 text-sm">
+                        <span>Đăng Nhập Quản Trị</span>
+                        <i class="fa-solid fa-arrow-right text-xs"></i>
                     </button>
-                    <div class="text-xs text-gray-400 text-center">Mặc định: admin / admin123</div>
                 </form>
-                <div class="pt-4 border-t border-gray-100 dark:border-gray-700 text-center">
-                    <template x-if="loginType === 'staff'">
-                        <button type="button" @click="loginType = 'admin'; loginError = ''" class="text-xs text-indigo-600 dark:text-indigo-400 hover:underline font-medium inline-flex items-center gap-1.5">
-                            <i class="fa-solid fa-lock text-[10px]"></i> Bạn là Quản trị viên? Đăng nhập tại đây
-                        </button>
-                    </template>
-                    <template x-if="loginType === 'admin'">
-                        <button type="button" @click="loginType = 'staff'; loginError = ''" class="text-xs text-indigo-600 dark:text-indigo-400 hover:underline font-medium inline-flex items-center gap-1.5">
-                            <i class="fa-solid fa-arrow-left text-[10px]"></i> Quay lại chọn tên nhân viên
-                        </button>
-                    </template>
+
+                <div class="pt-4 border-t border-slate-100 dark:border-slate-800 text-center">
+                    <button type="button" @click="loginType = loginType === 'staff' ? 'admin' : 'staff'; loginError = ''" class="text-xs text-indigo-600 dark:text-indigo-400 hover:underline font-semibold inline-flex items-center gap-1.5 transition">
+                        <i :class="loginType === 'staff' ? 'fa-solid fa-user-shield' : 'fa-solid fa-user'"></i>
+                        <span x-text="loginType === 'staff' ? 'Chuyển sang đăng nhập Quản trị viên' : 'Quay lại đăng nhập Nhân viên'"></span>
+                    </button>
                 </div>
             </div>
         </div>
@@ -98,204 +117,216 @@
 
     <!-- GIAO DIỆN CHÍNH -->
     <div x-show="isLoggedIn" class="min-h-screen flex flex-col" x-cloak>
-        <header class="bg-white dark:bg-gray-800 shadow-sm px-4 md:px-6 py-4 flex justify-between items-center border-b dark:border-gray-700 transition-colors">
-            <div class="flex items-center gap-2 md:gap-3">
-                <span class="text-base md:text-xl font-bold text-gray-800 dark:text-white">HRM Smart Schedule</span>
-                <span class="text-[10px] md:text-xs px-2.5 py-1 rounded-full font-medium" :class="role === 'admin' ? 'bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-300' : 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300'" x-text="role === 'admin' ? 'Admin' : 'Nhân viên'"></span>
-            </div>
-            <div class="flex items-center gap-3 text-sm">
-                <button @click="toggleDarkMode()" class="w-9 h-9 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-yellow-400 rounded-full flex items-center justify-center transition" title="Chuyển đổi giao diện">
-                    <i :class="darkMode ? 'fa-solid fa-sun' : 'fa-solid fa-moon'"></i>
-                </button>
-                <span class="hidden md:inline text-gray-600 dark:text-gray-300 font-medium">Xin chào, <strong class="text-indigo-600 dark:text-indigo-400" x-text="currentUser"></strong></span>
-                <button @click="logout()" class="text-rose-600 dark:text-rose-400 hover:underline font-medium text-xs md:text-sm">Thoát</button>
+        <!-- Header -->
+        <header class="bg-white/80 dark:bg-slate-900/80 backdrop-blur-md sticky top-0 z-30 border-b border-slate-200/80 dark:border-slate-800 transition-colors">
+            <div class="max-w-7xl mx-auto px-4 md:px-8 py-3.5 flex justify-between items-center">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 bg-indigo-600 text-white rounded-xl flex items-center justify-center font-bold shadow-md shadow-indigo-600/30">
+                        <i class="fa-solid fa-calendar-days text-base"></i>
+                    </div>
+                    <div>
+                        <h1 class="font-extrabold text-base md:text-lg tracking-tight text-slate-900 dark:text-white">HRM Smart Schedule</h1>
+                        <p class="text-[11px] text-slate-500 dark:text-slate-400 font-medium flex items-center gap-1.5">
+                            Xin chào, <strong class="text-indigo-600 dark:text-indigo-400 font-bold" x-text="currentUser"></strong>
+                            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider" :class="role === 'admin' ? 'bg-purple-100 text-purple-700 dark:bg-purple-950/60 dark:text-purple-300 border border-purple-200 dark:border-purple-800/60' : 'bg-blue-100 text-blue-700 dark:bg-blue-950/60 dark:text-blue-300 border border-blue-200 dark:border-blue-800/60'" x-text="role === 'admin' ? 'Admin' : 'Nhân viên'"></span>
+                        </p>
+                    </div>
+                </div>
+                <div class="flex items-center gap-2.5">
+                    <button @click="toggleDarkMode()" class="w-10 h-10 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 dark:text-amber-400 rounded-xl flex items-center justify-center transition shadow-sm" title="Chuyển đổi giao diện">
+                        <i :class="darkMode ? 'fa-solid fa-sun text-sm' : 'fa-solid fa-moon text-sm'"></i>
+                    </button>
+                    <button @click="logout()" class="px-3.5 py-2 bg-rose-50 dark:bg-rose-950/40 hover:bg-rose-100 text-rose-600 dark:text-rose-400 rounded-xl text-xs font-bold transition flex items-center gap-1.5 border border-rose-100 dark:border-rose-900/40">
+                        <i class="fa-solid fa-power-off"></i>
+                        <span class="hidden sm:inline">Đăng xuất</span>
+                    </button>
+                </div>
             </div>
         </header>
 
-        <main class="p-4 md:p-6 max-w-full flex-1 space-y-6">
+        <main class="max-w-7xl w-full mx-auto px-4 md:px-8 py-6 flex-1 space-y-6">
             <!-- THANH ĐIỀU HƯỚNG TUẦN & TRẠNG THÁI -->
-            <div x-show="currentView !== 'monthly'" class="bg-white dark:bg-gray-800 p-4 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 transition-colors">
-                <div class="flex items-center gap-3 w-full md:w-auto justify-between md:justify-start">
-                    <div class="flex items-center gap-3">
-                        <div class="w-10 h-10 bg-indigo-50 dark:bg-indigo-900/40 text-indigo-600 dark:text-indigo-400 rounded-lg flex items-center justify-center text-lg shrink-0">
-                            <i class="fa-solid fa-calendar-days"></i>
+            <div x-show="currentView !== 'monthly'" class="bg-white dark:bg-slate-900 p-4 md:p-5 rounded-2xl shadow-sm border border-slate-200/80 dark:border-slate-800 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 transition-colors">
+                <div class="flex items-center gap-3.5">
+                    <div class="w-11 h-11 bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 rounded-xl flex items-center justify-center text-lg shrink-0 border border-indigo-100 dark:border-indigo-900/40">
+                        <i class="fa-solid fa-calendar-week"></i>
+                    </div>
+                    <div>
+                        <div class="flex items-center gap-2 mb-0.5">
+                            <span class="text-[11px] text-slate-400 uppercase font-extrabold tracking-wider">Thời gian biểu tuần</span>
+                            <span class="inline-flex items-center gap-1 text-[10px] px-2.5 py-0.5 rounded-full font-bold uppercase tracking-wide shadow-sm" :class="isCurrentWeekLocked() ? 'bg-rose-100 text-rose-700 dark:bg-rose-950/60 dark:text-rose-300 border border-rose-200 dark:border-rose-800/60' : 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800/60'">
+                                <i :class="isCurrentWeekLocked() ? 'fa-solid fa-lock text-[9px]' : 'fa-solid fa-lock-open text-[9px]'"></i>
+                                <span x-text="isCurrentWeekLocked() ? 'Đã khóa' : 'Đang mở'"></span>
+                            </span>
                         </div>
-                        <div>
-                            <div class="flex items-center gap-2">
-                                <span class="text-xs text-gray-400 uppercase font-bold tracking-wider">Thời gian biểu</span>
-                                <template x-if="isCurrentWeekLocked()">
-                                    <span class="bg-rose-100 text-rose-700 dark:bg-rose-900/40 dark:text-rose-300 text-[10px] px-2 py-0.5 rounded-full font-bold flex items-center gap-1">
-                                        <i class="fa-solid fa-lock text-[9px]"></i> Khóa
-                                    </span>
-                                </template>
-                                <template x-if="!isCurrentWeekLocked()">
-                                    <span class="bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300 text-[10px] px-2 py-0.5 rounded-full font-bold flex items-center gap-1">
-                                        <i class="fa-solid fa-lock-open text-[9px]"></i> Mở
-                                    </span>
-                                </template>
-                            </div>
-                            <div class="text-sm md:text-base font-bold text-gray-800 dark:text-white" x-text="getWeekDisplayString()"></div>
-                        </div>
+                        <div class="text-sm md:text-base font-extrabold text-slate-800 dark:text-white" x-text="getWeekDisplayString()"></div>
                     </div>
                 </div>
                 <div class="flex items-center gap-2 flex-wrap w-full md:w-auto justify-between md:justify-end">
-                    <button @click="changeWeek(-1)" class="bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 px-3 py-2 rounded-lg text-xs md:text-sm font-medium transition flex items-center gap-1">
-                        <i class="fa-solid fa-chevron-left text-[10px]"></i> Trước
-                    </button>
-                    <button @click="resetToCurrentWeek()" class="bg-indigo-50 dark:bg-indigo-900/40 hover:bg-indigo-100 text-indigo-700 dark:text-indigo-300 px-3 py-2 rounded-lg text-xs md:text-sm font-semibold transition">
-                        Hiện tại
-                    </button>
-                    <button @click="changeWeek(1)" class="bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 px-3 py-2 rounded-lg text-xs md:text-sm font-medium transition flex items-center gap-1">
-                        Sau <i class="fa-solid fa-chevron-right text-[10px]"></i>
-                    </button>
+                    <div class="inline-flex rounded-xl bg-slate-100 dark:bg-slate-800 p-1 border border-slate-200 dark:border-slate-700 shadow-inner">
+                        <button @click="changeWeek(-1)" class="px-3 py-1.5 hover:bg-white dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 rounded-lg text-xs font-bold transition flex items-center gap-1">
+                            <i class="fa-solid fa-chevron-left text-[10px]"></i> Trước
+                        </button>
+                        <button @click="resetToCurrentWeek()" class="px-3 py-1.5 hover:bg-white dark:hover:bg-slate-700 text-indigo-600 dark:text-indigo-400 rounded-lg text-xs font-bold transition">
+                            Hiện tại
+                        </button>
+                        <button @click="changeWeek(1)" class="px-3 py-1.5 hover:bg-white dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 rounded-lg text-xs font-bold transition flex items-center gap-1">
+                            Sau <i class="fa-solid fa-chevron-right text-[10px]"></i>
+                        </button>
+                    </div>
                     <template x-if="role === 'admin'">
-                        <button @click="toggleLockWeek()" :class="isCurrentWeekLocked() ? 'bg-amber-600 hover:bg-amber-700 text-white' : 'bg-gray-800 hover:bg-gray-900 dark:bg-gray-700 dark:text-white'" class="px-3 py-2 rounded-lg text-xs md:text-sm font-medium transition flex items-center gap-1.5 shadow-sm">
+                        <button @click="toggleLockWeek()" :class="isCurrentWeekLocked() ? 'bg-amber-600 hover:bg-amber-700 text-white shadow-amber-600/20' : 'bg-slate-900 hover:bg-slate-800 dark:bg-slate-800 dark:hover:bg-slate-700 text-white'" class="px-3.5 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 shadow-md">
                             <i :class="isCurrentWeekLocked() ? 'fa-solid fa-lock-open' : 'fa-solid fa-lock'"></i>
-                            <span x-text="isCurrentWeekLocked() ? 'Mở khóa' : 'Khóa tuần'"></span>
+                            <span x-text="isCurrentWeekLocked() ? 'Mở khóa tuần' : 'Khóa lịch tuần'"></span>
                         </button>
                     </template>
                 </div>
             </div>
 
-            <!-- THANH CHUYỂN ĐỔI CHẾ ĐỘ XEM -->
-            <div class="flex border-b border-gray-200 dark:border-gray-700 gap-6 overflow-x-auto no-scrollbar whitespace-nowrap">
+            <!-- THANH TABS CHUYỂN ĐỔI CHẾ ĐỘ -->
+            <div class="flex border-b border-slate-200 dark:border-slate-800 gap-6 overflow-x-auto no-scrollbar whitespace-nowrap">
                 <template x-if="role === 'admin'">
                     <div class="flex gap-6">
-                        <button @click="currentView = 'table'" :class="currentView === 'table' ? 'border-indigo-600 text-indigo-600 dark:text-indigo-400' : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700'" class="pb-3 border-b-2 font-bold text-xs md:text-sm transition flex items-center gap-2">
-                            <i class="fa-solid fa-table-cells"></i> Bảng Lịch Tuần Tổng Hợp
+                        <button @click="currentView = 'table'" :class="currentView === 'table' ? 'border-indigo-600 text-indigo-600 dark:text-indigo-400 font-extrabold' : 'border-transparent text-slate-500 dark:text-slate-400 font-semibold hover:text-slate-700'" class="pb-3 border-b-2 text-xs md:text-sm transition flex items-center gap-2">
+                            <i class="fa-solid fa-table-cells text-base"></i> Bảng Lịch Tuần Tổng Hợp
                         </button>
-                        <button @click="currentView = 'timeline'" :class="currentView === 'timeline' ? 'border-indigo-600 text-indigo-600 dark:text-indigo-400' : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700'" class="pb-3 border-b-2 font-bold text-xs md:text-sm transition flex items-center gap-2">
-                            <i class="fa-solid fa-clock"></i> Xem Lịch Theo Ngày
+                        <button @click="currentView = 'timeline'" :class="currentView === 'timeline' ? 'border-indigo-600 text-indigo-600 dark:text-indigo-400 font-extrabold' : 'border-transparent text-slate-500 dark:text-slate-400 font-semibold hover:text-slate-700'" class="pb-3 border-b-2 text-xs md:text-sm transition flex items-center gap-2">
+                            <i class="fa-solid fa-clock text-base"></i> Xem Lịch Theo Ngày
                         </button>
-                        <button @click="currentView = 'monthly'; loadAllSchedulesForMonthlyStats()" :class="currentView === 'monthly' ? 'border-indigo-600 text-indigo-600 dark:text-indigo-400' : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700'" class="pb-3 border-b-2 font-bold text-xs md:text-sm transition flex items-center gap-2">
-                            <i class="fa-solid fa-chart-pie"></i> Thống Kê Theo Tháng
+                        <button @click="currentView = 'monthly'; loadAllSchedulesForMonthlyStats()" :class="currentView === 'monthly' ? 'border-indigo-600 text-indigo-600 dark:text-indigo-400 font-extrabold' : 'border-transparent text-slate-500 dark:text-slate-400 font-semibold hover:text-slate-700'" class="pb-3 border-b-2 text-xs md:text-sm transition flex items-center gap-2">
+                            <i class="fa-solid fa-chart-pie text-base"></i> Thống Kê Theo Tháng
                         </button>
                     </div>
                 </template>
                 <template x-if="role === 'staff'">
                     <div class="flex gap-6">
-                        <button @click="currentView = 'staffregister'" :class="currentView === 'staffregister' ? 'border-indigo-600 text-indigo-600 dark:text-indigo-400' : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700'" class="pb-3 border-b-2 font-bold text-xs md:text-sm transition flex items-center gap-2">
-                            <i class="fa-solid fa-pen-to-square"></i> Đăng Ký Lịch Ca Của Tôi
+                        <button @click="currentView = 'staffregister'" :class="currentView === 'staffregister' ? 'border-indigo-600 text-indigo-600 dark:text-indigo-400 font-extrabold' : 'border-transparent text-slate-500 dark:text-slate-400 font-semibold hover:text-slate-700'" class="pb-3 border-b-2 text-xs md:text-sm transition flex items-center gap-2">
+                            <i class="fa-solid fa-pen-to-square text-base"></i> Đăng Ký Lịch Ca Của Tôi
                         </button>
-                        <button @click="currentView = 'timeline'" :class="currentView === 'timeline' ? 'border-indigo-600 text-indigo-600 dark:text-indigo-400' : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700'" class="pb-3 border-b-2 font-bold text-xs md:text-sm transition flex items-center gap-2">
-                            <i class="fa-solid fa-clock"></i> Xem Timeline Ngày
+                        <button @click="currentView = 'timeline'" :class="currentView === 'timeline' ? 'border-indigo-600 text-indigo-600 dark:text-indigo-400 font-extrabold' : 'border-transparent text-slate-500 dark:text-slate-400 font-semibold hover:text-slate-700'" class="pb-3 border-b-2 text-xs md:text-sm transition flex items-center gap-2">
+                            <i class="fa-solid fa-clock text-base"></i> Xem Timeline Ngày
                         </button>
                     </div>
                 </template>
             </div>
 
-            <!-- CHẾ ĐỘ: BẢNG TUẦN TỔNG HỢP -->
+            <!-- CHẾ ĐỘ: BẢNG TUẦN TỔNG HỢP (ADMIN) -->
             <div x-show="role === 'admin' && currentView === 'table'" class="space-y-6">
+                <!-- Thống kê nhanh widget -->
                 <div class="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
-                    <div class="bg-white dark:bg-gray-800 p-3.5 md:p-4 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 flex items-center justify-between">
+                    <div class="bg-white dark:bg-slate-900 p-4 rounded-2xl shadow-sm border border-slate-200/80 dark:border-slate-800 flex items-center justify-between transition-all hover:shadow-md">
                         <div>
-                            <p class="text-[10px] md:text-xs text-gray-500 dark:text-gray-400 uppercase font-bold tracking-wider">Tổng nhân viên</p>
-                            <h4 class="text-xl md:text-2xl font-bold text-gray-800 dark:text-white mt-1" x-text="employees.length"></h4>
+                            <p class="text-[10px] md:text-xs text-slate-400 uppercase font-extrabold tracking-wider">Tổng nhân sự</p>
+                            <h4 class="text-xl md:text-2xl font-extrabold text-slate-900 dark:text-white mt-1" x-text="employees.length"></h4>
                         </div>
-                        <div class="w-8 h-8 md:w-10 md:h-10 bg-indigo-50 dark:bg-indigo-900/40 text-indigo-600 dark:text-indigo-400 rounded-lg flex items-center justify-center text-base md:text-lg">
+                        <div class="w-10 h-10 md:w-12 md:h-12 bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 rounded-2xl flex items-center justify-center text-lg shadow-inner">
                             <i class="fa-solid fa-users"></i>
                         </div>
                     </div>
-                    <div class="bg-white dark:bg-gray-800 p-3.5 md:p-4 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 flex items-center justify-between">
+                    <div class="bg-white dark:bg-slate-900 p-4 rounded-2xl shadow-sm border border-slate-200/80 dark:border-slate-800 flex items-center justify-between transition-all hover:shadow-md">
                         <div>
-                            <p class="text-[10px] md:text-xs text-gray-500 dark:text-gray-400 uppercase font-bold tracking-wider">Tổng ca tuần</p>
-                            <h4 class="text-xl md:text-2xl font-bold text-indigo-600 dark:text-indigo-400 mt-1" x-text="getTotalAssignedShifts()"></h4>
+                            <p class="text-[10px] md:text-xs text-slate-400 uppercase font-extrabold tracking-wider">Tổng ca tuần</p>
+                            <h4 class="text-xl md:text-2xl font-extrabold text-indigo-600 dark:text-indigo-400 mt-1" x-text="getTotalAssignedShifts()"></h4>
                         </div>
-                        <div class="w-8 h-8 md:w-10 md:h-10 bg-emerald-50 dark:bg-emerald-900/40 text-emerald-600 dark:text-emerald-400 rounded-lg flex items-center justify-center text-base md:text-lg">
+                        <div class="w-10 h-10 md:w-12 md:h-12 bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 rounded-2xl flex items-center justify-center text-lg shadow-inner">
                             <i class="fa-solid fa-calendar-check"></i>
                         </div>
                     </div>
-                    <div class="bg-white dark:bg-gray-800 p-3.5 md:p-4 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 flex items-center justify-between">
+                    <div class="bg-white dark:bg-slate-900 p-4 rounded-2xl shadow-sm border border-slate-200/80 dark:border-slate-800 flex items-center justify-between transition-all hover:shadow-md">
                         <div>
-                            <p class="text-[10px] md:text-xs text-gray-500 dark:text-gray-400 uppercase font-bold tracking-wider">Cao điểm nhất</p>
-                            <h4 class="text-sm md:text-lg font-bold text-amber-600 dark:text-amber-400 mt-1 truncate max-w-[100px] md:max-w-none" x-text="getPeakDayName()"></h4>
+                            <p class="text-[10px] md:text-xs text-slate-400 uppercase font-extrabold tracking-wider">Cao điểm nhất</p>
+                            <h4 class="text-xs md:text-base font-extrabold text-amber-600 dark:text-amber-400 mt-1 truncate max-w-[110px]" x-text="getPeakDayName()"></h4>
                         </div>
-                        <div class="w-8 h-8 md:w-10 md:h-10 bg-amber-50 dark:bg-amber-900/40 text-amber-600 dark:text-amber-400 rounded-lg flex items-center justify-center text-base md:text-lg">
-                            <i class="fa-solid fa-chart-line"></i>
+                        <div class="w-10 h-10 md:w-12 md:h-12 bg-amber-50 dark:bg-amber-950/60 text-amber-600 dark:text-amber-400 rounded-2xl flex items-center justify-center text-lg shadow-inner">
+                            <i class="fa-solid fa-fire-flame-curved"></i>
                         </div>
                     </div>
-                    <div class="bg-white dark:bg-gray-800 p-3.5 md:p-4 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 flex items-center justify-between">
+                    <div class="bg-white dark:bg-slate-900 p-4 rounded-2xl shadow-sm border border-slate-200/80 dark:border-slate-800 flex items-center justify-between transition-all hover:shadow-md">
                         <div>
-                            <p class="text-[10px] md:text-xs text-gray-500 dark:text-gray-400 uppercase font-bold tracking-wider">Bảo mật</p>
-                            <button @click="showPasswordModal = true" class="mt-1 text-xs md:text-sm bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 px-2.5 py-1 rounded-lg transition font-medium">
-                                <i class="fa-solid fa-key mr-1"></i> Đổi mật khẩu
+                            <p class="text-[10px] md:text-xs text-slate-400 uppercase font-extrabold tracking-wider">Bảo mật</p>
+                            <button @click="showPasswordModal = true" class="mt-1 text-xs bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 px-3 py-1.5 rounded-lg transition font-bold flex items-center gap-1.5">
+                                <i class="fa-solid fa-key text-[10px]"></i> Đổi mật khẩu
                             </button>
                         </div>
-                        <div class="w-8 h-8 md:w-10 md:h-10 bg-purple-50 dark:bg-purple-900/40 text-purple-600 dark:text-purple-400 rounded-lg flex items-center justify-center text-base md:text-lg">
+                        <div class="w-10 h-10 md:w-12 md:h-12 bg-purple-50 dark:bg-purple-950/60 text-purple-600 dark:text-purple-400 rounded-2xl flex items-center justify-center text-lg shadow-inner">
                             <i class="fa-solid fa-shield-halved"></i>
                         </div>
                     </div>
                 </div>
 
-                <div class="bg-white dark:bg-gray-800 p-4 rounded-t-xl shadow-sm border-b border-gray-200 dark:border-gray-700 flex flex-wrap gap-3 items-center justify-between transition-colors">
+                <!-- Thao tác bảng -->
+                <div class="bg-white dark:bg-slate-900 p-4 rounded-2xl shadow-sm border border-slate-200/80 dark:border-slate-800 flex flex-wrap gap-3 items-center justify-between transition-colors">
                     <div class="flex flex-wrap items-center gap-3 w-full md:w-auto">
                         <div class="flex items-center gap-2 w-full md:w-auto">
-                            <input type="text" x-model="newEmpName" @keyup.enter="addEmployee()" placeholder="Tên nhân viên mới..." class="border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 flex-1 md:w-52">
-                            <button @click="addEmployee()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition flex items-center gap-2 shadow-sm shrink-0">
-                                <i class="fa-solid fa-plus"></i> Thêm
+                            <input type="text" x-model="newEmpName" @keyup.enter="addEmployee()" placeholder="Tên nhân sự mới..." class="border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 dark:text-white rounded-xl px-4 py-2.5 text-xs md:text-sm font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500 flex-1 md:w-56 transition">
+                            <button @click="addEmployee()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2.5 rounded-xl text-xs md:text-sm font-bold transition flex items-center gap-2 shadow-md shadow-indigo-600/20 shrink-0">
+                                <i class="fa-solid fa-user-plus"></i> Thêm mới
                             </button>
                         </div>
                         <div class="relative w-full md:w-auto">
-                            <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-400"><i class="fa-solid fa-search text-xs"></i></span>
-                            <input type="text" x-model="searchKeyword" placeholder="Tìm kiếm tên..." class="border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg pl-9 pr-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 w-full md:w-48">
+                            <span class="absolute inset-y-0 left-0 flex items-center pl-3.5 text-slate-400"><i class="fa-solid fa-search text-xs"></i></span>
+                            <input type="text" x-model="searchKeyword" placeholder="Tìm kiếm tên..." class="border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 dark:text-white rounded-xl pl-10 pr-4 py-2.5 text-xs md:text-sm font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500 w-full md:w-52 transition">
                         </div>
                     </div>
-                    <div class="flex items-center gap-2 flex-wrap w-full md:w-auto justify-end">
-                        <button @click="exportWeeklyReportWord()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-3.5 py-2 rounded-lg text-xs md:text-sm font-semibold transition flex items-center gap-1.5 shadow-sm">
+                    <div class="flex items-center gap-2.5 flex-wrap w-full md:w-auto justify-end">
+                        <button @click="exportWeeklyReportWord()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2.5 rounded-xl text-xs md:text-sm font-bold transition flex items-center gap-2 shadow-md shadow-blue-600/20">
                             <i class="fa-solid fa-file-word"></i> Xuất Word Cả Tuần
                         </button>
-                        <button @click="clearAllShifts()" class="bg-rose-50 dark:bg-rose-900/30 hover:bg-rose-100 text-rose-600 dark:text-rose-400 border border-rose-200 dark:border-rose-800 px-3.5 py-2 rounded-lg text-xs md:text-sm font-medium transition">
-                            Xóa toàn bộ ca
+                        <button @click="clearAllShifts()" class="bg-rose-50 dark:bg-rose-950/40 hover:bg-rose-100 text-rose-600 dark:text-rose-400 border border-rose-200 dark:border-rose-900/40 px-3.5 py-2.5 rounded-xl text-xs md:text-sm font-bold transition">
+                            Xóa trắng tuần
                         </button>
                     </div>
                 </div>
 
-                <!-- BẢNG LỊCH -->
-                <div class="bg-white dark:bg-gray-800 rounded-b-xl shadow-sm overflow-x-auto transition-colors">
+                <!-- Bảng lịch chi tiết -->
+                <div class="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-200/80 dark:border-slate-800 overflow-x-auto transition-colors">
                     <table class="w-full text-left border-collapse min-w-[1100px]">
                         <thead>
-                            <tr class="bg-gray-50 dark:bg-gray-700/50 text-gray-700 dark:text-gray-300 text-xs font-bold uppercase tracking-wider border-b border-gray-200 dark:border-gray-700">
-                                <th class="py-3 px-4 border-r border-gray-200 dark:border-gray-700 w-44 sticky left-0 bg-gray-50 dark:bg-gray-700 z-20 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]">NHÂN VIÊN</th>
+                            <tr class="bg-slate-50 dark:bg-slate-800/70 text-slate-600 dark:text-slate-300 text-xs font-extrabold uppercase tracking-wider border-b border-slate-200 dark:border-slate-800">
+                                <th class="py-3.5 px-4 border-r border-slate-200 dark:border-slate-800 w-48 sticky left-0 bg-slate-50 dark:bg-slate-800 z-20 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.05)]">NHÂN SỰ</th>
                                 <template x-for="day in days" :key="day.key">
-                                    <th class="py-3 px-2 border-r border-gray-200 dark:border-gray-700 text-center" x-text="day.name"></th>
+                                    <th class="py-3.5 px-2 border-r border-slate-200 dark:border-slate-800 text-center">
+                                        <div class="text-slate-900 dark:text-white font-extrabold" x-text="day.name"></div>
+                                        <div class="text-[10px] text-slate-400 font-semibold mt-0.5" x-text="getDateStringForDay(day.key)"></div>
+                                    </th>
                                 </template>
-                                <th class="py-3 px-2 border-r border-gray-200 dark:border-gray-700 text-center w-24">TỔNG</th>
-                                <th class="py-3 px-3 text-center w-20">XÓA</th>
+                                <th class="py-3.5 px-2 border-r border-slate-200 dark:border-slate-800 text-center w-24">TỔNG</th>
+                                <th class="py-3.5 px-3 text-center w-16">XÓA</th>
                             </tr>
                         </thead>
-                        <tbody class="divide-y divide-gray-200 dark:divide-gray-700 text-sm text-gray-800 dark:text-gray-200">
+                        <tbody class="divide-y divide-slate-100 dark:divide-slate-800/80 text-sm">
                             <template x-for="emp in filteredEmployees" :key="emp.id">
-                                <tr class="hover:bg-gray-50/50 dark:hover:bg-gray-700/30 transition">
-                                    <td class="py-3 px-4 font-bold border-r border-gray-200 dark:border-gray-700 sticky left-0 bg-white dark:bg-gray-800 z-10 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]">
-                                        <div x-text="emp.name" class="mb-1 truncate max-w-[140px]" :title="emp.name"></div>
-                                        <div class="flex gap-1.5 text-[10px]">
-                                            <button @click="toggleFullEmp(emp, true)" class="text-indigo-600 dark:text-indigo-400 hover:underline">Cả tuần</button>
-                                            <span class="text-gray-300 dark:text-gray-600">|</span>
-                                            <button @click="toggleFullEmp(emp, false)" class="text-rose-500 hover:underline">Hủy</button>
+                                <tr class="hover:bg-slate-50/60 dark:hover:bg-slate-800/40 transition">
+                                    <td class="py-3 px-4 font-bold border-r border-slate-200 dark:border-slate-800 sticky left-0 bg-white dark:bg-slate-900 z-10 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.05)]">
+                                        <div x-text="emp.name" class="mb-1 truncate max-w-[130px]" :title="emp.name"></div>
+                                        <div class="flex gap-2 text-[10px] font-bold">
+                                            <button @click="toggleFullEmp(emp, true)" class="text-indigo-600 dark:text-indigo-400 hover:underline">Chọn hết</button>
+                                            <span class="text-slate-300 dark:text-slate-700">|</span>
+                                            <button @click="toggleFullEmp(emp, false)" class="text-rose-500 hover:underline">Bỏ chọn</button>
                                         </div>
                                     </td>
                                     <template x-for="day in days" :key="day.key">
-                                        <td class="py-2 px-1 border-r border-gray-200 dark:border-gray-700 text-center align-middle">
-                                            <div class="flex flex-col gap-1 items-center justify-center" x-show="emp.schedule && emp.schedule[currentWeekKey] && emp.schedule[currentWeekKey][day.key]">
-                                                <label class="flex items-center gap-1.5 text-xs cursor-pointer select-none py-1 px-1.5 rounded hover:bg-gray-100 dark:hover:bg-gray-700/50 w-full justify-center">
-                                                    <input type="checkbox" x-model="emp.schedule[currentWeekKey][day.key].ca1" @change="saveEmpSchedule(emp)" class="rounded text-indigo-600 focus:ring-indigo-500 w-4 h-4 dark:bg-gray-700 dark:border-gray-600 shrink-0">
-                                                    <span class="text-[11px] font-medium text-gray-600 dark:text-gray-300">C1</span>
+                                        <td class="py-2.5 px-1.5 border-r border-slate-100 dark:border-slate-800/60 text-center align-middle">
+                                            <div class="flex flex-col gap-1 items-center justify-center bg-slate-50/70 dark:bg-slate-800/40 p-1.5 rounded-xl border border-slate-100 dark:border-slate-800" x-show="emp.schedule && emp.schedule[currentWeekKey] && emp.schedule[currentWeekKey][day.key]">
+                                                <label class="flex items-center gap-1.5 text-xs cursor-pointer select-none py-0.5 px-1.5 rounded hover:bg-slate-200/60 dark:hover:bg-slate-700/50 w-full justify-between transition">
+                                                    <span class="text-[10px] font-bold text-blue-600 dark:text-blue-400">C1</span>
+                                                    <input type="checkbox" x-model="emp.schedule[currentWeekKey][day.key].ca1" @change="saveEmpSchedule(emp)" class="rounded text-indigo-600 focus:ring-indigo-500 w-4 h-4 dark:bg-slate-700 dark:border-slate-600 shrink-0 cursor-pointer">
                                                 </label>
-                                                <label class="flex items-center gap-1.5 text-xs cursor-pointer select-none py-1 px-1.5 rounded hover:bg-gray-100 dark:hover:bg-gray-700/50 w-full justify-center">
-                                                    <input type="checkbox" x-model="emp.schedule[currentWeekKey][day.key].ca2" @change="saveEmpSchedule(emp)" class="rounded text-indigo-600 focus:ring-indigo-500 w-4 h-4 dark:bg-gray-700 dark:border-gray-600 shrink-0">
-                                                    <span class="text-[11px] font-medium text-gray-600 dark:text-gray-300">C2</span>
+                                                <label class="flex items-center gap-1.5 text-xs cursor-pointer select-none py-0.5 px-1.5 rounded hover:bg-slate-200/60 dark:hover:bg-slate-700/50 w-full justify-between transition">
+                                                    <span class="text-[10px] font-bold text-amber-600 dark:text-amber-400">C2</span>
+                                                    <input type="checkbox" x-model="emp.schedule[currentWeekKey][day.key].ca2" @change="saveEmpSchedule(emp)" class="rounded text-indigo-600 focus:ring-indigo-500 w-4 h-4 dark:bg-slate-700 dark:border-slate-600 shrink-0 cursor-pointer">
                                                 </label>
-                                                <label class="flex items-center gap-1.5 text-xs cursor-pointer select-none py-1 px-1.5 rounded hover:bg-gray-100 dark:hover:bg-gray-700/50 w-full justify-center">
-                                                    <input type="checkbox" x-model="emp.schedule[currentWeekKey][day.key].ca3" @change="saveEmpSchedule(emp)" class="rounded text-indigo-600 focus:ring-indigo-500 w-4 h-4 dark:bg-gray-700 dark:border-gray-600 shrink-0">
-                                                    <span class="text-[11px] font-medium text-gray-600 dark:text-gray-300">C3</span>
+                                                <label class="flex items-center gap-1.5 text-xs cursor-pointer select-none py-0.5 px-1.5 rounded hover:bg-slate-200/60 dark:hover:bg-slate-700/50 w-full justify-between transition">
+                                                    <span class="text-[10px] font-bold text-purple-600 dark:text-purple-400">C3</span>
+                                                    <input type="checkbox" x-model="emp.schedule[currentWeekKey][day.key].ca3" @change="saveEmpSchedule(emp)" class="rounded text-indigo-600 focus:ring-indigo-500 w-4 h-4 dark:bg-slate-700 dark:border-slate-600 shrink-0 cursor-pointer">
                                                 </label>
                                             </div>
                                         </td>
                                     </template>
-                                    <td class="py-3 px-2 border-r border-gray-200 dark:border-gray-700 text-center font-bold text-indigo-600 dark:text-indigo-400" x-text="getEmpTotalShifts(emp)"></td>
+                                    <td class="py-3 px-2 border-r border-slate-200 dark:border-slate-800 text-center font-extrabold text-indigo-600 dark:text-indigo-400 text-base" x-text="getEmpTotalShifts(emp)"></td>
                                     <td class="py-3 px-3 text-center">
-                                        <button @click="deleteEmployee(emp.id)" class="text-gray-400 hover:text-rose-600 transition p-2" title="Xóa nhân viên">
-                                            <i class="fa-solid fa-trash-can"></i>
+                                        <button @click="deleteEmployee(emp.id)" class="text-slate-400 hover:text-rose-600 transition p-2 rounded-lg hover:bg-rose-50 dark:hover:bg-rose-950/40" title="Xóa nhân viên">
+                                            <i class="fa-solid fa-trash-can text-xs"></i>
                                         </button>
                                     </td>
                                 </tr>
@@ -307,21 +338,21 @@
 
             <!-- CHẾ ĐỘ: THỐNG KÊ THÁNG -->
             <div x-show="role === 'admin' && currentView === 'monthly'" class="space-y-6">
-                <div class="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 flex flex-wrap justify-between items-center gap-4 transition-colors">
+                <div class="bg-white dark:bg-slate-900 p-6 rounded-2xl shadow-sm border border-slate-200/80 dark:border-slate-800 flex flex-wrap justify-between items-center gap-4 transition-colors">
                     <div>
-                        <h3 class="text-lg font-bold text-gray-800 dark:text-white mb-1">Bảng Thống Kê Tổng Số Ca Trực Theo Tháng</h3>
-                        <p class="text-sm text-gray-500 dark:text-gray-400">Tổng hợp toàn bộ các ca trực của từng nhân sự xuất hiện trong tháng đã chọn.</p>
+                        <h3 class="text-base md:text-lg font-extrabold text-slate-900 dark:text-white mb-1">Bảng Thống Kê Tổng Số Ca Trực Theo Tháng</h3>
+                        <p class="text-xs md:text-sm text-slate-500 dark:text-slate-400 font-medium">Tổng hợp toàn bộ các ca trực của từng nhân sự xuất hiện trong tháng đã chọn.</p>
                     </div>
                     <div class="flex items-center gap-3">
                         <div>
-                            <label class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Chọn Tháng</label>
-                            <select x-model="statsMonth" class="border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                            <label class="block text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1">Chọn Tháng</label>
+                            <select x-model="statsMonth" class="border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 dark:text-white rounded-xl px-4 py-2.5 text-sm font-bold focus:outline-none focus:ring-2 focus:ring-indigo-500 transition">
                                 <template x-for="m in 12"><option :value="m" x-text="'Tháng ' + m"></option></template>
                             </select>
                         </div>
                         <div>
-                            <label class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Chọn Năm</label>
-                            <select x-model="statsYear" class="border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                            <label class="block text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1">Chọn Năm</label>
+                            <select x-model="statsYear" class="border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 dark:text-white rounded-xl px-4 py-2.5 text-sm font-bold focus:outline-none focus:ring-2 focus:ring-indigo-500 transition">
                                 <option value="2025">2025</option>
                                 <option value="2026">2026</option>
                                 <option value="2027">2027</option>
@@ -329,26 +360,26 @@
                         </div>
                     </div>
                 </div>
-                <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm overflow-x-auto border border-gray-200 dark:border-gray-700 transition-colors">
+                <div class="bg-white dark:bg-slate-900 rounded-2xl shadow-sm overflow-x-auto border border-slate-200/80 dark:border-slate-800 transition-colors">
                     <table class="w-full text-left border-collapse min-w-[700px]">
                         <thead>
-                            <tr class="bg-gray-50 dark:bg-gray-700/50 text-gray-700 dark:text-gray-300 text-xs font-bold uppercase tracking-wider border-b border-gray-200 dark:border-gray-700">
-                                <th class="py-3.5 px-4 border-r border-gray-200 dark:border-gray-700 text-center w-16">STT</th>
-                                <th class="py-3.5 px-6 border-r border-gray-200 dark:border-gray-700">HỌ VÀ TÊN NHÂN SỰ</th>
-                                <th class="py-3.5 px-4 border-r border-gray-200 dark:border-gray-700 text-center">TỔNG CA 1</th>
-                                <th class="py-3.5 px-4 border-r border-gray-200 dark:border-gray-700 text-center">TỔNG CA 2</th>
-                                <th class="py-3.5 px-4 border-r border-gray-200 dark:border-gray-700 text-center">TỔNG CA 3</th>
+                            <tr class="bg-slate-50 dark:bg-slate-800/70 text-slate-600 dark:text-slate-300 text-xs font-extrabold uppercase tracking-wider border-b border-slate-200 dark:border-slate-800">
+                                <th class="py-3.5 px-4 border-r border-slate-200 dark:border-slate-800 text-center w-16">STT</th>
+                                <th class="py-3.5 px-6 border-r border-slate-200 dark:border-slate-800">HỌ VÀ TÊN NHÂN SỰ</th>
+                                <th class="py-3.5 px-4 border-r border-slate-200 dark:border-slate-800 text-center text-blue-600 dark:text-blue-400">TỔNG CA 1</th>
+                                <th class="py-3.5 px-4 border-r border-slate-200 dark:border-slate-800 text-center text-amber-600 dark:text-amber-400">TỔNG CA 2</th>
+                                <th class="py-3.5 px-4 border-r border-slate-200 dark:border-slate-800 text-center text-purple-600 dark:text-purple-400">TỔNG CA 3</th>
                                 <th class="py-3.5 px-6 text-center text-indigo-600 dark:text-indigo-400 font-extrabold">TỔNG CỘNG</th>
                             </tr>
                         </thead>
-                        <tbody class="divide-y divide-gray-200 dark:divide-gray-700 text-sm text-gray-800 dark:text-gray-200">
+                        <tbody class="divide-y divide-slate-100 dark:divide-slate-800/80 text-sm">
                             <template x-for="(emp, idx) in employees" :key="emp.id">
-                                <tr class="hover:bg-gray-50/50 dark:hover:bg-gray-700/30 transition">
-                                    <td class="py-4 px-4 border-r border-gray-200 dark:border-gray-700 text-center font-medium text-gray-500" x-text="idx + 1"></td>
-                                    <td class="py-4 px-6 border-r border-gray-200 dark:border-gray-700 font-bold" x-text="emp.name"></td>
-                                    <td class="py-4 px-4 border-r border-gray-200 dark:border-gray-700 text-center font-semibold text-blue-600 dark:text-blue-400" x-text="getMonthlyStatsForEmp(emp).ca1"></td>
-                                    <td class="py-4 px-4 border-r border-gray-200 dark:border-gray-700 text-center font-semibold text-amber-600 dark:text-amber-400" x-text="getMonthlyStatsForEmp(emp).ca2"></td>
-                                    <td class="py-4 px-4 border-r border-gray-200 dark:border-gray-700 text-center font-semibold text-purple-600 dark:text-purple-400" x-text="getMonthlyStatsForEmp(emp).ca3"></td>
+                                <tr class="hover:bg-slate-50/60 dark:hover:bg-slate-800/40 transition">
+                                    <td class="py-4 px-4 border-r border-slate-200 dark:border-slate-800 text-center font-bold text-slate-400" x-text="idx + 1"></td>
+                                    <td class="py-4 px-6 border-r border-slate-200 dark:border-slate-800 font-extrabold text-slate-900 dark:text-white" x-text="emp.name"></td>
+                                    <td class="py-4 px-4 border-r border-slate-200 dark:border-slate-800 text-center font-bold text-blue-600 dark:text-blue-400" x-text="getMonthlyStatsForEmp(emp).ca1"></td>
+                                    <td class="py-4 px-4 border-r border-slate-200 dark:border-slate-800 text-center font-bold text-amber-600 dark:text-amber-400" x-text="getMonthlyStatsForEmp(emp).ca2"></td>
+                                    <td class="py-4 px-4 border-r border-slate-200 dark:border-slate-800 text-center font-bold text-purple-600 dark:text-purple-400" x-text="getMonthlyStatsForEmp(emp).ca3"></td>
                                     <td class="py-4 px-6 text-center font-extrabold text-indigo-600 dark:text-indigo-400 text-base" x-text="getMonthlyStatsForEmp(emp).total"></td>
                                 </tr>
                             </template>
@@ -357,151 +388,150 @@
                 </div>
             </div>
 
-            <!-- CHẾ ĐỘ: ĐĂNG KÝ CA (Nhân viên) -->
-            <div x-show="role === 'staff' && currentView === 'staffregister'" class="space-y-6 max-w-4xl mx-auto">
-                <div class="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 flex flex-wrap justify-between items-center gap-4 transition-colors">
+            <!-- CHẾ ĐỘ: ĐĂNG KÝ CA CÁ NHÂN (NHÂN VIÊN) -->
+            <div x-show="role === 'staff' && currentView === 'staffregister'" class="space-y-6 max-w-5xl mx-auto">
+                <div class="bg-white dark:bg-slate-900 p-6 rounded-2xl shadow-sm border border-slate-200/80 dark:border-slate-800 flex flex-wrap justify-between items-center gap-4 transition-colors">
                     <div>
-                        <h3 class="text-lg font-bold text-gray-800 dark:text-white mb-1">Đăng Ký / Tùy Chỉnh Lịch Trực Cá Nhân</h3>
-                        <p class="text-sm text-gray-500 dark:text-gray-400" x-text="isCurrentWeekLocked() ? 'Tuần này đã bị khóa lịch bởi Quản trị viên.' : 'Tích chọn các ca trực của bạn trong tuần đang hiển thị.'"></p>
+                        <h3 class="text-base md:text-lg font-extrabold text-slate-900 dark:text-white mb-1">Đăng Ký / Tùy Chỉnh Lịch Trực Cá Nhân</h3>
+                        <p class="text-xs md:text-sm text-slate-500 dark:text-slate-400 font-medium" x-text="isCurrentWeekLocked() ? 'Tuần này đã bị khóa lịch bởi Quản trị viên.' : 'Tích chọn các ca trực của bạn trong tuần đang hiển thị.'"></p>
                     </div>
-                    <div class="flex items-center gap-4">
-                        <div class="bg-indigo-50 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300 px-4 py-2 rounded-lg text-sm font-semibold">
+                    <div class="flex items-center gap-3">
+                        <div class="bg-indigo-50 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-300 border border-indigo-100 dark:border-indigo-900/40 px-4 py-2.5 rounded-xl text-xs md:text-sm font-extrabold shadow-sm">
                             Đã chọn: <span x-text="currentStaffData ? getEmpTotalShifts(currentStaffData) : 0"></span> ca
                         </div>
                     </div>
                 </div>
+
                 <template x-if="isCurrentWeekLocked()">
-                    <div class="bg-amber-50 dark:bg-amber-900/30 border border-amber-200 dark:border-amber-800 text-amber-800 dark:text-amber-300 p-4 rounded-xl text-sm flex items-center gap-3">
-                        <i class="fa-solid fa-triangle-exclamation text-lg text-amber-600"></i>
+                    <div class="bg-amber-50 dark:bg-amber-950/50 border border-amber-200 dark:border-amber-800/60 text-amber-800 dark:text-amber-300 p-4 rounded-2xl text-xs md:text-sm font-semibold flex items-center gap-3 shadow-sm">
+                        <i class="fa-solid fa-triangle-exclamation text-lg text-amber-600 shrink-0"></i>
                         <span>Lịch tuần này đã khóa đăng ký chỉnh sửa. Vui lòng liên hệ Quản trị viên nếu cần thay đổi ca.</span>
                     </div>
                 </template>
+
                 <template x-if="!isCurrentWeekLocked()">
                     <div class="flex gap-3">
-                        <button @click="if(currentStaffData) { toggleFullEmp(currentStaffData, true); }" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition shadow-sm flex items-center gap-2">
+                        <button @click="if(currentStaffData) { toggleFullEmp(currentStaffData, true); }" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2.5 rounded-xl text-xs md:text-sm font-bold transition shadow-md shadow-indigo-600/20 flex items-center gap-2">
                             <i class="fa-solid fa-check-double"></i> Chọn cả tuần
                         </button>
-                        <button @click="if(currentStaffData) { toggleFullEmp(currentStaffData, false); }" class="bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 text-rose-600 dark:text-rose-400 border border-rose-200 dark:border-rose-800 px-4 py-2 rounded-lg text-sm font-medium transition">
+                        <button @click="if(currentStaffData) { toggleFullEmp(currentStaffData, false); }" class="bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800 text-rose-600 dark:text-rose-400 border border-rose-200 dark:border-rose-900/40 px-4 py-2.5 rounded-xl text-xs md:text-sm font-bold transition shadow-sm">
                             Hủy toàn bộ
                         </button>
                     </div>
                 </template>
-                <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm overflow-x-auto border border-gray-200 dark:border-gray-700 transition-colors">
-                    <table class="w-full text-left border-collapse min-w-[700px]">
-                        <thead>
-                            <tr class="bg-gray-50 dark:bg-gray-700/50 text-gray-700 dark:text-gray-300 text-xs font-bold uppercase tracking-wider border-b border-gray-200 dark:border-gray-700">
-                                <th class="py-3 px-4 border-r border-gray-200 dark:border-gray-700 text-center w-36">THỨ</th>
-                                <template x-for="day in days" :key="day.key">
-                                    <th class="py-3 px-3 border-r border-gray-200 dark:border-gray-700 text-center" x-text="day.name"></th>
-                                </template>
-                            </tr>
-                        </thead>
-                        <tbody class="divide-y divide-gray-200 dark:divide-gray-700 text-sm text-gray-800 dark:text-gray-200">
-                            <template x-if="currentStaffData">
-                                <tr>
-                                    <td class="py-4 px-4 font-bold border-r border-gray-200 dark:border-gray-700 text-center bg-gray-50 dark:bg-gray-700/30" x-text="currentStaffData.name"></td>
-                                    <template x-for="day in days" :key="day.key">
-                                        <td class="py-3 px-2 border-r border-gray-200 dark:border-gray-700 text-center align-middle">
-                                            <div class="flex flex-col gap-1.5 items-center" x-show="currentStaffData.schedule && currentStaffData.schedule[currentWeekKey] && currentStaffData.schedule[currentWeekKey][day.key]">
-                                                <label class="flex items-center gap-2 text-xs cursor-pointer select-none py-1.5 px-2 rounded hover:bg-gray-100 dark:hover:bg-gray-700/50 w-full justify-center">
-                                                    <input type="checkbox" :disabled="isCurrentWeekLocked()" x-model="currentStaffData.schedule[currentWeekKey][day.key].ca1" @change="saveEmpSchedule(currentStaffData)" class="rounded text-indigo-600 focus:ring-indigo-500 w-4 h-4 disabled:opacity-50 dark:bg-gray-700 dark:border-gray-600">
-                                                    <span class="font-medium">Ca 1</span>
-                                                </label>
-                                                <label class="flex items-center gap-2 text-xs cursor-pointer select-none py-1.5 px-2 rounded hover:bg-gray-100 dark:hover:bg-gray-700/50 w-full justify-center">
-                                                    <input type="checkbox" :disabled="isCurrentWeekLocked()" x-model="currentStaffData.schedule[currentWeekKey][day.key].ca2" @change="saveEmpSchedule(currentStaffData)" class="rounded text-indigo-600 focus:ring-indigo-500 w-4 h-4 disabled:opacity-50 dark:bg-gray-700 dark:border-gray-600">
-                                                    <span class="font-medium">Ca 2</span>
-                                                </label>
-                                                <label class="flex items-center gap-2 text-xs cursor-pointer select-none py-1.5 px-2 rounded hover:bg-gray-100 dark:hover:bg-gray-700/50 w-full justify-center">
-                                                    <input type="checkbox" :disabled="isCurrentWeekLocked()" x-model="currentStaffData.schedule[currentWeekKey][day.key].ca3" @change="saveEmpSchedule(currentStaffData)" class="rounded text-indigo-600 focus:ring-indigo-500 w-4 h-4 disabled:opacity-50 dark:bg-gray-700 dark:border-gray-600">
-                                                    <span class="font-medium">Ca 3</span>
-                                                </label>
-                                            </div>
-                                        </td>
-                                    </template>
-                                </tr>
-                            </template>
-                        </tbody>
-                    </table>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-7 gap-3.5">
+                    <template x-for="day in days" :key="day.key">
+                        <div class="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-slate-800 p-4 flex flex-col justify-between shadow-sm hover:shadow-md transition">
+                            <div class="border-b border-slate-100 dark:border-slate-800 pb-3 mb-3 flex items-center justify-between">
+                                <span class="font-extrabold text-sm text-slate-900 dark:text-white" x-text="day.name"></span>
+                                <span class="text-[11px] px-2 py-0.5 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 font-bold" x-text="getDateStringForDay(day.key)"></span>
+                            </div>
+                            <div class="space-y-2.5" x-show="currentStaffData && currentStaffData.schedule && currentStaffData.schedule[currentWeekKey]">
+                                <label class="flex items-center justify-between p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-100 dark:border-slate-800 cursor-pointer hover:border-indigo-400 dark:hover:border-indigo-500 transition select-none">
+                                    <span class="text-xs font-extrabold text-blue-600 dark:text-blue-400">Ca 1 (Sáng)</span>
+                                    <input type="checkbox" :disabled="isCurrentWeekLocked()" x-model="currentStaffData.schedule[currentWeekKey][day.key].ca1" @change="saveEmpSchedule(currentStaffData)" class="w-4 h-4 accent-indigo-600 rounded cursor-pointer disabled:opacity-50">
+                                </label>
+                                <label class="flex items-center justify-between p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-100 dark:border-slate-800 cursor-pointer hover:border-indigo-400 dark:hover:border-indigo-500 transition select-none">
+                                    <span class="text-xs font-extrabold text-amber-600 dark:text-amber-400">Ca 2 (Chiều)</span>
+                                    <input type="checkbox" :disabled="isCurrentWeekLocked()" x-model="currentStaffData.schedule[currentWeekKey][day.key].ca2" @change="saveEmpSchedule(currentStaffData)" class="w-4 h-4 accent-indigo-600 rounded cursor-pointer disabled:opacity-50">
+                                </label>
+                                <label class="flex items-center justify-between p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-100 dark:border-slate-800 cursor-pointer hover:border-indigo-400 dark:hover:border-indigo-500 transition select-none">
+                                    <span class="text-xs font-extrabold text-purple-600 dark:text-purple-400">Ca 3 (Tối)</span>
+                                    <input type="checkbox" :disabled="isCurrentWeekLocked()" x-model="currentStaffData.schedule[currentWeekKey][day.key].ca3" @change="saveEmpSchedule(currentStaffData)" class="w-4 h-4 accent-indigo-600 rounded cursor-pointer disabled:opacity-50">
+                                </label>
+                            </div>
+                        </div>
+                    </template>
                 </div>
             </div>
 
             <!-- CHẾ ĐỘ: TIMELINE NGÀY -->
             <div x-show="currentView === 'timeline'" class="space-y-6 max-w-5xl mx-auto">
-                <div class="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 space-y-4 transition-colors">
+                <div class="bg-white dark:bg-slate-900 p-6 rounded-2xl shadow-sm border border-slate-200/80 dark:border-slate-800 space-y-4 transition-colors">
                     <div class="flex flex-wrap justify-between items-center gap-4">
                         <div>
-                            <h3 class="text-lg font-bold text-gray-800 dark:text-white">Timeline Trực Ca Theo Ngày</h3>
-                            <p class="text-sm text-gray-500 dark:text-gray-400">Chọn một ngày trong tuần để xem danh sách nhân sự trực chi tiết từng ca.</p>
+                            <h3 class="text-base md:text-lg font-extrabold text-slate-900 dark:text-white">Timeline Trực Ca Theo Ngày</h3>
+                            <p class="text-xs md:text-sm text-slate-500 dark:text-slate-400 font-medium">Chọn một ngày trong tuần để xem danh sách nhân sự trực chi tiết từng ca.</p>
                         </div>
-                        <div class="flex items-center gap-3 flex-wrap">
-                            <button @click="exportDailyReportWord(selectedTimelineDay)" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-xs font-bold transition flex items-center gap-2 shadow-sm">
-                                <i class="fa-solid fa-file-word"></i> Xuất File Word Ngày Này
-                            </button>
-                        </div>
+                        <button @click="exportDailyReportWord(selectedTimelineDay)" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2.5 rounded-xl text-xs font-bold transition flex items-center gap-2 shadow-md shadow-blue-600/20">
+                            <i class="fa-solid fa-file-word"></i> Xuất File Word Ngày Này
+                        </button>
                     </div>
-                    <div class="flex gap-1.5 bg-gray-100 dark:bg-gray-700 p-1 rounded-lg overflow-x-auto no-scrollbar">
+                    <div class="flex gap-1.5 bg-slate-100 dark:bg-slate-800 p-1.5 rounded-2xl overflow-x-auto no-scrollbar border border-slate-200/60 dark:border-slate-700/60">
                         <template x-for="day in days" :key="day.key">
-                            <button type="button" @click="selectedTimelineDay = day.key" :class="selectedTimelineDay === day.key ? 'bg-indigo-600 text-white shadow-sm' : 'text-gray-600 dark:text-gray-300 hover:text-gray-900'" class="px-3.5 py-1.5 rounded-md text-xs font-bold transition whitespace-nowrap" x-text="day.name"></button>
+                            <button type="button" @click="selectedTimelineDay = day.key" :class="selectedTimelineDay === day.key ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/25' : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white'" class="px-4 py-2 rounded-xl text-xs font-extrabold transition whitespace-nowrap" x-text="day.name"></button>
                         </template>
                     </div>
-                    <div class="text-sm font-semibold text-indigo-600 dark:text-indigo-400 border-l-4 border-indigo-600 pl-3">
-                        Chi tiết nhân sự trực ngày: <span class="uppercase font-bold" x-text="getDayFullName(selectedTimelineDay)"></span> (Ngày: <span x-text="getDateStringForDay(selectedTimelineDay)"></span>)
+                    <div class="text-xs md:text-sm font-bold text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-950/50 p-3 rounded-xl border border-indigo-100 dark:border-indigo-900/40 inline-flex items-center gap-2">
+                        <i class="fa-solid fa-calendar-day"></i>
+                        <span>Chi tiết nhân sự trực: <strong class="uppercase" x-text="getDayFullName(selectedTimelineDay)"></strong> (Ngày: <span x-text="getDateStringForDay(selectedTimelineDay)"></span>)</span>
                     </div>
                 </div>
+
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden flex flex-col transition-colors">
-                        <div class="bg-blue-50 dark:bg-blue-900/30 px-5 py-3.5 border-b border-blue-100 dark:border-blue-800 flex justify-between items-center">
-                            <h4 class="font-bold text-blue-900 dark:text-blue-300 text-sm flex items-center gap-2">
-                                <i class="fa-solid fa-sun text-amber-500"></i> Ca 1
+                    <!-- Ca 1 -->
+                    <div class="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-200/80 dark:border-slate-800 overflow-hidden flex flex-col transition-colors">
+                        <div class="bg-blue-50/70 dark:bg-blue-950/40 px-5 py-4 border-b border-blue-100 dark:border-blue-900/40 flex justify-between items-center">
+                            <h4 class="font-extrabold text-blue-900 dark:text-blue-300 text-sm flex items-center gap-2">
+                                <i class="fa-solid fa-sun text-amber-500"></i> Ca 1 (Sáng)
                             </h4>
-                            <span class="bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300 text-xs font-bold px-2.5 py-1 rounded-full" x-text="getStaffsForShift(selectedTimelineDay, 'ca1').length + ' nhân sự'"></span>
+                            <span class="bg-blue-100 text-blue-700 dark:bg-blue-900/60 dark:text-blue-300 text-xs font-extrabold px-3 py-1 rounded-full border border-blue-200 dark:border-blue-800/60" x-text="getStaffsForShift(selectedTimelineDay, 'ca1').length + ' người'"></span>
                         </div>
-                        <div class="p-5 flex-1 space-y-2">
+                        <div class="p-5 flex-1 space-y-2.5">
                             <template x-if="getStaffsForShift(selectedTimelineDay, 'ca1').length === 0">
-                                <p class="text-gray-400 text-xs italic text-center py-6">Không có nhân sự trực ca này</p>
+                                <p class="text-slate-400 text-xs italic text-center py-8">Chưa có nhân sự trực ca này</p>
                             </template>
                             <template x-for="(name, index) in getStaffsForShift(selectedTimelineDay, 'ca1')" :key="name">
-                                <div class="bg-gray-50 dark:bg-gray-700/40 border border-gray-100 dark:border-gray-700 px-3.5 py-2.5 rounded-lg text-sm font-medium text-gray-700 dark:text-gray-200 flex items-center gap-2.5 transition">
-                                    <span class="text-xs font-bold text-indigo-600 dark:text-indigo-400" x-text="(index + 1) + '.'"></span>
-                                    <span x-text="name"></span>
+                                <div class="bg-slate-50 dark:bg-slate-800/60 border border-slate-100 dark:border-slate-800 px-4 py-3 rounded-xl text-sm font-bold text-slate-800 dark:text-slate-200 flex items-center gap-3 transition">
+                                    <span class="w-6 h-6 rounded-lg bg-blue-100 dark:bg-blue-900/60 text-blue-600 dark:text-blue-300 flex items-center justify-center text-xs font-extrabold shrink-0" x-text="index + 1"></span>
+                                    <span x-text="name" class="truncate"></span>
                                 </div>
                             </template>
                         </div>
                     </div>
-                    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden flex flex-col transition-colors">
-                        <div class="bg-amber-50 dark:bg-amber-900/30 px-5 py-3.5 border-b border-amber-100 dark:border-amber-800 flex justify-between items-center">
-                            <h4 class="font-bold text-amber-900 dark:text-amber-300 text-sm flex items-center gap-2">
-                                <i class="fa-solid fa-cloud-sun text-orange-500"></i> Ca 2
+                    <!-- Ca 2 -->
+                    <div class="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-200/80 dark:border-slate-800 overflow-hidden flex flex-col transition-colors">
+                        <div class="bg-amber-50/70 dark:bg-amber-950/40 px-5 py-4 border-b border-amber-100 dark:border-amber-900/40 flex justify-between items-center">
+                            <h4 class="font-extrabold text-amber-900 dark:text-amber-300 text-sm flex items-center gap-2">
+                                <i class="fa-solid fa-cloud-sun text-orange-500"></i> Ca 2 (Chiều)
                             </h4>
-                            <span class="bg-amber-100 text-amber-700 dark:bg-amber-900 dark:text-amber-300 text-xs font-bold px-2.5 py-1 rounded-full" x-text="getStaffsForShift(selectedTimelineDay, 'ca2').length + ' nhân sự'"></span>
+                            <span class="bg-amber-100 text-amber-700 dark:bg-amber-900/60 dark:text-amber-300 text-xs font-extrabold px-3 py-1 rounded-full border border-amber-200 dark:border-amber-800/60" x-text="getStaffsForShift(selectedTimelineDay, 'ca2').length + ' người'"></span>
                         </div>
-                        <div class="p-5 flex-1 space-y-2">
+                        <div class="p-5 flex-1 space-y-2.5">
                             <template x-if="getStaffsForShift(selectedTimelineDay, 'ca2').length === 0">
-                                <p class="text-gray-400 text-xs italic text-center py-6">Không có nhân sự trực ca này</p>
+                                <p class="text-slate-400 text-xs italic text-center py-8">Chưa có nhân sự trực ca này</p>
                             </template>
                             <template x-for="(name, index) in getStaffsForShift(selectedTimelineDay, 'ca2')" :key="name">
-                                <div class="bg-gray-50 dark:bg-gray-700/40 border border-gray-100 dark:border-gray-700 px-3.5 py-2.5 rounded-lg text-sm font-medium text-gray-700 dark:text-gray-200 flex items-center gap-2.5 transition">
-                                    <span class="text-xs font-bold text-amber-600 dark:text-amber-400" x-text="(index + 1) + '.'"></span>
-                                    <span x-text="name"></span>
+                                <div class="bg-slate-50 dark:bg-slate-800/60 border border-slate-100 dark:border-slate-800 px-4 py-3 rounded-xl text-sm font-bold text-slate-800 dark:text-slate-200 flex items-center justify-between transition">
+                                    <div class="flex items-center gap-3">
+                                        <span class="w-6 h-6 rounded-lg bg-amber-100 dark:bg-amber-900/60 text-amber-600 dark:text-amber-300 flex items-center justify-center text-xs font-extrabold shrink-0" x-text="index + 1"></span>
+                                        <span x-text="name" class="truncate"></span>
+                                    </div>
+                                    <span x-show="index < 2" class="text-[10px] px-2.5 py-0.5 rounded-lg bg-rose-100 dark:bg-rose-950/60 text-rose-600 dark:text-rose-300 font-extrabold border border-rose-200 dark:border-rose-800/60 shrink-0">Trực trưa</span>
                                 </div>
                             </template>
                         </div>
                     </div>
-                    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden flex flex-col transition-colors">
-                        <div class="bg-indigo-50 dark:bg-indigo-900/30 px-5 py-3.5 border-b border-indigo-100 dark:border-indigo-800 flex justify-between items-center">
-                            <h4 class="font-bold text-indigo-900 dark:text-indigo-300 text-sm flex items-center gap-2">
-                                <i class="fa-solid fa-moon text-indigo-600 dark:text-indigo-400"></i> Ca 3
+                    <!-- Ca 3 -->
+                    <div class="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-200/80 dark:border-slate-800 overflow-hidden flex flex-col transition-colors">
+                        <div class="bg-purple-50/70 dark:bg-purple-950/40 px-5 py-4 border-b border-purple-100 dark:border-purple-900/40 flex justify-between items-center">
+                            <h4 class="font-extrabold text-purple-900 dark:text-purple-300 text-sm flex items-center gap-2">
+                                <i class="fa-solid fa-moon text-purple-600"></i> Ca 3 (Tối)
                             </h4>
-                            <span class="bg-indigo-100 text-indigo-700 dark:bg-indigo-900 dark:text-indigo-300 text-xs font-bold px-2.5 py-1 rounded-full" x-text="getStaffsForShift(selectedTimelineDay, 'ca3').length + ' nhân sự'"></span>
+                            <span class="bg-purple-100 text-purple-700 dark:bg-purple-900/60 dark:text-purple-300 text-xs font-extrabold px-3 py-1 rounded-full border border-purple-200 dark:border-purple-800/60" x-text="getStaffsForShift(selectedTimelineDay, 'ca3').length + ' người'"></span>
                         </div>
-                        <div class="p-5 flex-1 space-y-2">
+                        <div class="p-5 flex-1 space-y-2.5">
                             <template x-if="getStaffsForShift(selectedTimelineDay, 'ca3').length === 0">
-                                <p class="text-gray-400 text-xs italic text-center py-6">Không có nhân sự trực ca này</p>
+                                <p class="text-slate-400 text-xs italic text-center py-8">Chưa có nhân sự trực ca này</p>
                             </template>
                             <template x-for="(name, index) in getStaffsForShift(selectedTimelineDay, 'ca3')" :key="name">
-                                <div class="bg-gray-50 dark:bg-gray-700/40 border border-gray-100 dark:border-gray-700 px-3.5 py-2.5 rounded-lg text-sm font-medium text-gray-700 dark:text-gray-200 flex items-center gap-2.5 transition">
-                                    <span class="text-xs font-bold text-indigo-600 dark:text-indigo-400" x-text="(index + 1) + '.'"></span>
-                                    <span x-text="name"></span>
+                                <div class="bg-slate-50 dark:bg-slate-800/60 border border-slate-100 dark:border-slate-800 px-4 py-3 rounded-xl text-sm font-bold text-slate-800 dark:text-slate-200 flex items-center justify-between transition">
+                                    <div class="flex items-center gap-3">
+                                        <span class="w-6 h-6 rounded-lg bg-purple-100 dark:bg-purple-900/60 text-purple-600 dark:text-purple-300 flex items-center justify-center text-xs font-extrabold shrink-0" x-text="index + 1"></span>
+                                        <span x-text="name" class="truncate"></span>
+                                    </div>
+                                    <span x-show="index < 2" class="text-[10px] px-2.5 py-0.5 rounded-lg bg-rose-100 dark:bg-rose-950/60 text-rose-600 dark:text-rose-300 font-extrabold border border-rose-200 dark:border-rose-800/60 shrink-0">Trực tối</span>
                                 </div>
                             </template>
                         </div>
@@ -512,32 +542,34 @@
     </div>
 
     <!-- MODAL ĐỔI MẬT KHẨU -->
-    <div x-show="showPasswordModal" class="fixed inset-0 bg-gray-900/60 backdrop-blur-sm flex items-center justify-center z-50 p-4" x-cloak>
-        <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden p-6 space-y-4">
+    <div x-show="showPasswordModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-md flex items-center justify-center z-50 p-4" x-cloak>
+        <div class="bg-white dark:bg-slate-900 rounded-3xl shadow-2xl w-full max-w-sm overflow-hidden p-6 md:p-8 space-y-5 border border-slate-100 dark:border-slate-800">
             <div class="flex justify-between items-center">
-                <h3 class="text-lg font-bold text-gray-800 dark:text-white">Đổi Mật Khẩu Admin</h3>
-                <button @click="showPasswordModal = false" class="text-gray-400 hover:text-gray-600"><i class="fa-solid fa-xmark text-lg"></i></button>
+                <h3 class="text-base font-extrabold text-slate-900 dark:text-white flex items-center gap-2">
+                    <i class="fa-solid fa-key text-indigo-600"></i> Đổi Mật Khẩu Admin
+                </h3>
+                <button @click="showPasswordModal = false" class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition"><i class="fa-solid fa-xmark text-lg"></i></button>
             </div>
             <template x-if="passwordMsg">
-                <div :class="passwordError ? 'bg-rose-50 text-rose-600 border-rose-200 dark:bg-rose-900/40 dark:text-rose-300' : 'bg-emerald-50 text-emerald-600 border-emerald-200 dark:bg-emerald-900/40 dark:text-emerald-300'" class="text-xs p-2.5 rounded-lg border font-medium text-center" x-text="passwordMsg"></div>
+                <div :class="passwordError ? 'bg-rose-50 text-rose-600 border-rose-200 dark:bg-rose-950/60 dark:text-rose-300' : 'bg-emerald-50 text-emerald-600 border-emerald-200 dark:bg-emerald-950/60 dark:text-emerald-300'" class="text-xs p-3 rounded-xl border font-bold text-center" x-text="passwordMsg"></div>
             </template>
-            <div class="space-y-3">
+            <div class="space-y-3.5">
                 <div>
-                    <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Mật khẩu hiện tại</label>
-                    <input type="password" x-model="pwdForm.oldPwd" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                    <label class="block text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1">Mật khẩu hiện tại</label>
+                    <input type="password" x-model="pwdForm.oldPwd" class="w-full px-4 py-3 border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 dark:text-white rounded-xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500 transition">
                 </div>
                 <div>
-                    <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Mật khẩu mới</label>
-                    <input type="password" x-model="pwdForm.newPwd" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                    <label class="block text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1">Mật khẩu mới</label>
+                    <input type="password" x-model="pwdForm.newPwd" class="w-full px-4 py-3 border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 dark:text-white rounded-xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500 transition">
                 </div>
                 <div>
-                    <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Xác nhận mật khẩu mới</label>
-                    <input type="password" x-model="pwdForm.confirmPwd" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                    <label class="block text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1">Xác nhận mật khẩu mới</label>
+                    <input type="password" x-model="pwdForm.confirmPwd" class="w-full px-4 py-3 border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 dark:text-white rounded-xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500 transition">
                 </div>
             </div>
-            <div class="flex gap-2 pt-2">
-                <button @click="showPasswordModal = false" class="flex-1 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 py-2 rounded-lg text-sm font-medium transition">Hủy</button>
-                <button @click="changeAdminPassword()" class="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white py-2 rounded-lg text-sm font-medium transition shadow-sm">Lưu thay đổi</button>
+            <div class="flex gap-3 pt-2">
+                <button @click="showPasswordModal = false" class="flex-1 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 py-3 rounded-xl text-xs font-bold transition">Hủy</button>
+                <button @click="changeAdminPassword()" class="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white py-3 rounded-xl text-xs font-bold transition shadow-md shadow-indigo-600/25">Lưu thay đổi</button>
             </div>
         </div>
     </div>
@@ -587,10 +619,7 @@
                         window.fbOnValue(empRef, (snapshot) => {
                             const data = snapshot.val();
                             if (data) {
-                                const rawList = Array.isArray(data) 
-                                    ? data 
-                                    : Object.keys(data).map(key => ({ id: key, ...data[key] }));
-                                
+                                const rawList = Array.isArray(data) ? data : Object.keys(data).map(key => ({ id: key, ...data[key] }));
                                 this.employees = rawList.filter(Boolean).map(emp => {
                                     const existing = this.employees.find(e => e.id === emp.id);
                                     return {
@@ -622,7 +651,6 @@
                                 this.loadCurrentWeekData();
                             }
                         });
-
                         if (this.currentView === 'monthly') {
                             this.loadAllSchedulesForMonthlyStats();
                         }
@@ -636,21 +664,17 @@
             loadCurrentWeekData() {
                 if (!window.db || !window.fbRef) return;
                 const weekKey = this.currentWeekKey;
-
                 this.employees.forEach(emp => {
                     if (!emp.schedule) emp.schedule = {};
                     if (!emp.schedule[weekKey]) {
                         emp.schedule[weekKey] = window.getDefaultWeekSchedule();
                     }
                 });
-
                 if (this.activeListeners[weekKey]) {
                     const cachedWeek = this.allWeeksCache[weekKey];
                     if (cachedWeek) {
                         this.employees.forEach(emp => {
-                            if (cachedWeek[emp.id]) {
-                                emp.schedule[weekKey] = cachedWeek[emp.id];
-                            }
+                            if (cachedWeek[emp.id]) emp.schedule[weekKey] = cachedWeek[emp.id];
                         });
                     }
                     return;
@@ -680,7 +704,6 @@
             loadAllSchedulesForMonthlyStats() {
                 if (!window.db || !window.fbRef || this.activeListeners['all_schedules']) return;
                 this.activeListeners['all_schedules'] = true;
-
                 const allSchedulesRef = window.fbRef(window.db, 'hrm_smart_schedule_data/schedules_by_week');
                 window.fbOnValue(allSchedulesRef, (snapshot) => {
                     const allData = snapshot.val() || {};
@@ -689,9 +712,7 @@
                         const weekData = allData[weekKey];
                         this.employees.forEach(emp => {
                             if (!emp.schedule) emp.schedule = {};
-                            if (weekData && weekData[emp.id]) {
-                                emp.schedule[weekKey] = weekData[emp.id];
-                            }
+                            if (weekData && weekData[emp.id]) emp.schedule[weekKey] = weekData[emp.id];
                         });
                     });
                 });
@@ -809,14 +830,12 @@
             getMonthlyStatsForEmp(emp) {
                 let stats = { ca1: 0, ca2: 0, ca3: 0, total: 0 };
                 if (!emp || !emp.schedule) return stats;
-
                 Object.keys(emp.schedule).forEach(mondayKey => {
                     let parts = mondayKey.split('-');
                     if (parts.length !== 3) return;
                     let mondayDate = new Date(parts[0], parts[1] - 1, parts[2]);
                     let weekData = emp.schedule[mondayKey];
                     if (!weekData) return;
-
                     for (let i = 0; i < 7; i++) {
                         let currDate = new Date(mondayDate);
                         currDate.setDate(mondayDate.getDate() + i);
@@ -942,7 +961,7 @@
             },
 
             deleteEmployee(id) {
-                if (confirm('Bạn có chắc chắn muốn xóa nhân viên này khỏi hệ thống?')) {
+                if (confirm('Bạn có chắc chắn muốn xóa nhân sự này khỏi hệ thống?')) {
                     this.employees = this.employees.filter(e => e.id !== id);
                     this.saveEmployeesToStorage();
                 }
@@ -964,10 +983,7 @@
 
             saveEmployeesToStorage() {
                 if (window.db && window.fbRef && window.fbSet) {
-                    const cleanEmployees = this.employees.map(emp => ({
-                        id: emp.id,
-                        name: emp.name
-                    }));
+                    const cleanEmployees = this.employees.map(emp => ({ id: emp.id, name: emp.name }));
                     window.fbSet(window.fbRef(window.db, 'hrm_smart_schedule_data/employees_list'), cleanEmployees).catch((err) => {
                         console.error("Lỗi khi lưu danh sách nhân viên lên Firebase:", err);
                     });
@@ -981,7 +997,6 @@
                     return;
                 }
                 if (!emp.schedule || !emp.schedule[this.currentWeekKey]) return;
-
                 if (window.db && window.fbRef && window.fbSet) {
                     const empWeekRef = window.fbRef(window.db, `hrm_smart_schedule_data/schedules_by_week/${this.currentWeekKey}/${emp.id}`);
                     window.fbSet(empWeekRef, emp.schedule[this.currentWeekKey]);
