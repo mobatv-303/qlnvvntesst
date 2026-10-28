@@ -1,12 +1,12 @@
 window.APP_CONFIG = {
     firebaseConfig: {
-        apiKey: "AIzaSyCqsv8xo0KsAYm-TYIE58jqVUvS2JPaeMk",
-        authDomain: "ngochao-90782.firebaseapp.com",
-        databaseURL: "https://ngochao-90782-default-rtdb.asia-southeast1.firebasedatabase.app",
-        projectId: "ngochao-90782",
-        storageBucket: "ngochao-90782.firebasestorage.app",
-        messagingSenderId: "609549450140",
-        appId: "1:609549450140:web:4abf6b9a681805ff412659",
-        measurementId: "G-T8YGX6ZW0D"
+        apiKey: "AIzaSyB82JABeqIWdQm1842qnnWIvuaeyRNgyog",
+        authDomain: "vpsvn-8ebd6.firebaseapp.com",
+        databaseURL: "https://vpsvn-8ebd6-default-rtdb.asia-southeast1.firebasedatabase.app",
+        projectId: "vpsvn-8ebd6",
+        storageBucket: "vpsvn-8ebd6.firebasestorage.app",
+        messagingSenderId: "947319716277",
+        appId: "1:947319716277:web:5ed25aae69ec7f5e0501fc",
+        measurementId: "G-RWKZQDVVR5"
     }
 };
